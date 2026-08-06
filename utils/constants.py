@@ -5,3 +5,4 @@ class BlockType:
     NOTE_BLOCK = "extendednoteblock:extended_note_block"
     REPEATER = "minecraft:repeater"
     COMMAND_BLOCK = "minecraft:command_block"
+    LEVER = "minecraft:lever"

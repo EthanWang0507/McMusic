@@ -1,7 +1,8 @@
 from mcrcon import MCRcon
 
-from config.config import BlockType
+from utils.constants import BlockType
 from utils.logger import LOGGER
+
 
 class BlockSetter:
     def __init__(self):

@@ -3,7 +3,6 @@ from utils.logger import LOGGER
 
 
 def transform_block(midi_info, TPS=20):
-    """将"""
     all_notes = []
     programs = [0] * 16  # programs[channel] = program
 

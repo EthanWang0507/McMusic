@@ -59,21 +59,24 @@ def make_block(all_notes_info, sx, sy, sz, track_gap=3):
 
     for i in range(track_num):  # 在轨道-1位置放置红石线
         blockSetter.setBlock(BlockType.WIRE, track_x[i], sy, sz - 1)
+    # 放置命令方块来激活轨道
     blockSetter.setBlock(BlockType.COMMAND_BLOCK, track_x[0] - 1, sy, sz - 2, {
         "Command": {
             "content": f"/fill ~1 ~ ~ ~{(track_num - 1) * (track_gap + 1) + 2} ~ ~ minecraft:redstone_block",
             "type": "string"
         }
     })
+    blockSetter.setBlock(BlockType.LEVER, track_x[0] - 1, sy, sz - 3)
     blockSetter.setBlock(BlockType.COMMAND_BLOCK, track_x[0] - 3, sy, sz - 2, {
         "Command": {
             "content": f"/fill ~3 ~ ~ ~{(track_num - 1) * (track_gap + 1) + 4} ~ ~ minecraft:air",
             "type": "string"
         }
     })
+    blockSetter.setBlock(BlockType.LEVER, track_x[0] - 3, sy, sz - 3)
 
     offset_z = 0
-    n = 0
+    n = 0  # all_notes当前下标
     while n < len(all_notes):
         delta = all_notes[n]['delta_mc_tick']
         if delta > 0:

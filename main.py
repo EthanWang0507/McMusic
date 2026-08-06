@@ -29,7 +29,7 @@ if __name__ == "__main__":
     all_block_info = transform_block(midi_info, TPS=TPS)
     LOGGER.info("转换完成")
 
-    input()
+    input("按下回车继续...")
 
     LOGGER.info("正在放置方块...")
     make_block(all_block_info, SX, SY, SZ)
