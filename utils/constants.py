@@ -15,9 +15,9 @@ class BlockType:
 @dataclass
 class BlockEntry:
     block_id: BlockType
-    x: float
-    y: float
-    z: float
+    x: int
+    y: int
+    z: int
     program: int = field(default=-1)
     nbt: dict = field(default_factory=dict)
     state: dict = field(default_factory=dict)

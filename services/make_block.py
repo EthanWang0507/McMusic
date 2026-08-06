@@ -37,6 +37,8 @@ def get_sync_notes_pos(notes_num: int) -> list[dict]:
 
 
 class MakeBlock:
+    __track_len = 0  # 音乐轨道长度
+
     def __init__(self, sx, sy, sz, track_gap=3):
         self.sx = sx
         self.sy = sy
@@ -47,10 +49,13 @@ class MakeBlock:
     def _add_block(self, block: BlockEntry):
         self.blocks.append(block)
 
-    def _add_one_delay(self, x: float, y: float, z: float):
+    def _add_one_delay(self, x: int, y: int, z: int):
         self._add_block(BlockEntry(BlockType.STICKY_PISTON, x, y, z, state={"facing": {"content": "south", "type": "normal"}}))
         self._add_block(BlockEntry(BlockType.REDSTONE_BLOCK, x, y, z + 1))
         self._add_block(BlockEntry(BlockType.WIRE, x, y, z + 3))
+
+    def get_track_len(self) -> int:
+        return self.__track_len
 
     def build(self, all_notes_info) -> list[BlockEntry]:
         def make_track_trigger():
@@ -121,6 +126,8 @@ class MakeBlock:
 
             cur_notes_track = {all_notes[n]['track']: [all_notes[n]]}  # 同时播放的音符的轨道下标
             while n + 1 < len(all_notes) and all_notes[n + 1]['delta_mc_tick'] == 0:
+                if all_notes[n + 1]['track'] not in cur_notes_track:
+                    cur_notes_track[all_notes[n + 1]['track']] = []
                 cur_notes_track[all_notes[n + 1]['track']].append(all_notes[n + 1])
                 n += 1
 
@@ -165,6 +172,7 @@ class MakeBlock:
                     self._add_block(BlockEntry(BlockType.REDSTONE_LAMP, track_x[i], self.sy, self.sz + offset_z))
             offset_z += 1
             n += 1
+        self.__track_len = offset_z
 
         return self.blocks
 

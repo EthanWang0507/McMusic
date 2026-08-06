@@ -45,14 +45,14 @@ class BlockSetter:
             state_cmd += "]"
 
         r = self.mcr.command(f"/setblock {x} {y} {z} {block_type}{state_cmd}{nbt_cmd}")
-        print(f"Set {x} {y} {z}  R:{r}", end='\r', flush=True)
+        print(f"Set {x} {y} {z}  R:{r}")
         return 0
 
     def setOneDelay(self, x, y, z):
         r1 = self.mcr.command(f"/setblock {x} {y} {z} minecraft:sticky_piston[facing=south]")
         r2 = self.mcr.command(f"/setblock {x} {y} {z + 1} minecraft:redstone_block")
         r3 = self.mcr.command(f"/setblock {x} {y} {z + 3} minecraft:redstone_wire")
-        print(f"Set {x} {y} {z}  R:{r1 + r2 + r3}", end='\r', flush=True)
+        print(f"Set {x} {y} {z}  R:{r1 + r2 + r3}")
         return 0
 
     def setProgram(self, x, y, z, program):  # 设置noteblcok的音色
@@ -108,12 +108,12 @@ class BlockSetter:
         LOGGER.info(f"开始放置方块，共计{total}个")
 
         for i, block in enumerate(blocks):
-            self.setBlock(block.blcok_id, block.x, block.y, block.z, nbt=block.nbt, state=block.state)
+            self.setBlock(block.block_id, block.x, block.y, block.z, nbt=block.nbt, state=block.state)
             if block.program >= 0:
                 self.setProgram(block.x, block.y, block.z, block.program)
 
             if show_progress and i % 150 == 0:
-                LOGGER.info(f"放置进度: {(i + 1) / total:.1f}%")
+                LOGGER.info(f"放置进度: {(i + 1) / total * 100:.1f}%")
 
         LOGGER.info(f"所有方块放置完成, 耗时{time.time() - begin_time} s")
 

@@ -15,22 +15,26 @@ if __name__ == "__main__":
     LOGGER.info("Welcome to My Project.")
 
     # SX, SY, SZ = 400, -60, -3000
-    # TPS = 16
+    # TPS = 16.0
     # MIDI_FILE = "data/midi/60BPM_G_River Flows In You.mid"
+    # TRACK_GAP = 3
+    # AUTO_CONFIRM = False
 
     parser = argparse.ArgumentParser(description="Minecraft红石音乐生成工具")
     parser.add_argument("midifile", help="Midi 文件路径")
-    parser.add_argument("sx", help="起始 X 坐标")
-    parser.add_argument("sy", help="起始 Y 坐标")
-    parser.add_argument("sz", help="起始 Z 坐标")
+    parser.add_argument("sx", type=int, help="起始 X 坐标")
+    parser.add_argument("sy", type=int, help="起始 Y 坐标")
+    parser.add_argument("sz", type=int, help="起始 Z 坐标")
     parser.add_argument("-t", "--tps", type=float, default=20.0, help="Minecraft TPS")
     parser.add_argument("--track-gap", type=int, default=3, help="轨道间隔格数")
+    parser.add_argument("--auto-confirm", type=bool, default=False, help="自动开始放置方块(较危险)")
     args = parser.parse_args()
 
     SX, SY, SZ = args.sx, args.sy, args.sz
     TPS = args.tps
     MIDI_FILE = args.midifile
     TRACK_GAP = args.track_gap
+    AUTO_CONFIRM = args.auto_confirm
 
     LOGGER.info("============INPUT============")
     LOGGER.info(f"Midi file: {MIDI_FILE}")
@@ -53,13 +57,13 @@ if __name__ == "__main__":
     LOGGER.info(f"音乐时长: {midi_info['total_duration'] / 1e6:.2f}s  |  TPS: {TPS}")
     LOGGER.info(f"轨道数: {midi_info['num_tracks']}  |  方块数量: {len(blocks)}")
     LOGGER.info(f"起始坐标: ({SX}, {SY}, {SZ})  | "
-                f"终点坐标: ({SX + midi_info['num_tracks'] * (TRACK_GAP + 1)}, {SY}, {SZ + len(blocks) - 1})")
+                f"终点坐标: ({SX + (midi_info['num_tracks'] - 1) * (TRACK_GAP + 1)}, {SY}, {SZ + maker.get_track_len() - 1})")
     LOGGER.info("===============END==============")
 
-    if not args.auto_confirm:
-        confirm = input("确认开始放置？(y/n): ").strip().lower()
-        if confirm != "y":
-            print("已取消放置")
+    if not AUTO_CONFIRM:
+        confirm = input("确认开始放置？(Y/n): ").strip()
+        if confirm != "Y":
+            LOGGER.info("已取消放置")
             exit(0)
 
     block_setter = BlockSetter()
