@@ -1,7 +1,7 @@
 from utils.logger import LOGGER
 from config import config
 from utils.constants import BlockType
-from blockSetter import BlockSetter
+from services.blockSetter import BlockSetter
 
 
 def get_sync_notes_pos(notes_num: int) -> list[dict]:
@@ -41,6 +41,27 @@ def make_block(all_notes_info, sx, sy, sz, track_gap=3):
     在起始坐标处，从左至右，从后往前，依次放置。
     track_gap: 轨道间隔
     """
+
+    def make_track_trigger():
+        """用于在轨道前放置红石原件以激活轨道"""
+        for i in range(track_num):  # 在轨道z=-1位置放置红石线
+            blockSetter.setBlock(BlockType.WIRE, track_x[i], sy, sz - 1)
+        # 放置命令方块来激活轨道
+        blockSetter.setBlock(BlockType.COMMAND_BLOCK, track_x[0] - 1, sy, sz - 2, {
+            "Command": {
+                "content": f"/fill ~1 ~ ~ ~{(track_num - 1) * (track_gap + 1) + 2} ~ ~ minecraft:redstone_block",
+                "type": "string"
+            }
+        })
+        blockSetter.setBlock(BlockType.LEVER, track_x[0] - 1, sy, sz - 3)
+        blockSetter.setBlock(BlockType.COMMAND_BLOCK, track_x[0] - 3, sy, sz - 2, {
+            "Command": {
+                "content": f"/fill ~3 ~ ~ ~{(track_num - 1) * (track_gap + 1) + 4} ~ ~ minecraft:air",
+                "type": "string"
+            }
+        })
+        blockSetter.setBlock(BlockType.LEVER, track_x[0] - 3, sy, sz - 3)
+
     blockSetter = BlockSetter()
 
     config.validate_rcon_config()
@@ -53,35 +74,19 @@ def make_block(all_notes_info, sx, sy, sz, track_gap=3):
     track_num = all_notes_info['track_num']
     all_notes = all_notes_info['all_notes']
 
+    # 计算每个轨道的x坐标
     track_x = [0] * track_num
     for i in range(track_num):  # track下标从0开始
         track_x[i] = sx + i * (track_gap + 1)
 
-    for i in range(track_num):  # 在轨道-1位置放置红石线
-        blockSetter.setBlock(BlockType.WIRE, track_x[i], sy, sz - 1)
-    # 放置命令方块来激活轨道
-    blockSetter.setBlock(BlockType.COMMAND_BLOCK, track_x[0] - 1, sy, sz - 2, {
-        "Command": {
-            "content": f"/fill ~1 ~ ~ ~{(track_num - 1) * (track_gap + 1) + 2} ~ ~ minecraft:redstone_block",
-            "type": "string"
-        }
-    })
-    blockSetter.setBlock(BlockType.LEVER, track_x[0] - 1, sy, sz - 3)
-    blockSetter.setBlock(BlockType.COMMAND_BLOCK, track_x[0] - 3, sy, sz - 2, {
-        "Command": {
-            "content": f"/fill ~3 ~ ~ ~{(track_num - 1) * (track_gap + 1) + 4} ~ ~ minecraft:air",
-            "type": "string"
-        }
-    })
-    blockSetter.setBlock(BlockType.LEVER, track_x[0] - 3, sy, sz - 3)
+    make_track_trigger()
 
     offset_z = 0
     n = 0  # all_notes当前下标
     while n < len(all_notes):
-        delta = all_notes[n]['delta_mc_tick']
+        delta = all_notes[n]['delta_mc_tick']  # 音符与上一个音符的时间差
         if delta > 0:
-            cnt = {4: 0, 3: 0, 2: 0, 1: 0}
-            cnt[4] = delta // 8
+            cnt = {4: delta // 8, 3: 0, 2: 0, 1: 0}  # 四个档位的红石中继器个数
             delta %= 8
             cnt[3] = delta // 6
             delta %= 6
@@ -89,11 +94,9 @@ def make_block(all_notes_info, sx, sy, sz, track_gap=3):
             delta %= 4
             cnt[1] = delta // 2
             delta %= 2
-            if delta > 0:
-                LOGGER.warning(f"Warn: loss: 1 at z: {sz + offset_z}")  # TPS should be doubled or more to improve rhythm accuracy
 
-            for j in range(4, 0, -1):
-                for k in range(cnt[j]):
+            for j in range(4, 0, -1):  # 遍历cnt
+                for k in range(cnt[j]):  # 遍历红石中继器个数
                     cz = sz + offset_z
                     for i in range(track_num):
                         # y轴垂直于地面，方块水平放置，y不变
@@ -103,15 +106,15 @@ def make_block(all_notes_info, sx, sy, sz, track_gap=3):
 
             if delta > 0:
                 cz = sz + offset_z
+                LOGGER.info(f"Put OneDelay at z={cz}")
                 for i in range(track_num):
                     blockSetter.setOneDelay(track_x[i], sy, cz)
                 # 脉冲(0 gt) -> 粘性活塞 -> 红石块 -> air -> 红石线 -> 音符盒(1 gt) -> 脉冲
                 # setOneDelay在z轴方向占4格
                 offset_z += 4
-        cur_notes_track = {all_notes[n]['track']: [all_notes[n]]}  # 存储所有同时播放的音符的轨道
+
+        cur_notes_track = {all_notes[n]['track']: [all_notes[n]]}  # 同时播放的音符的轨道下标
         while n + 1 < len(all_notes) and all_notes[n + 1]['delta_mc_tick'] == 0:
-            if all_notes[n + 1]['track'] not in cur_notes_track:
-                cur_notes_track[all_notes[n + 1]['track']] = []
             cur_notes_track[all_notes[n + 1]['track']].append(all_notes[n + 1])
             n += 1
 
