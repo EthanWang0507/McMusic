@@ -4,9 +4,11 @@ load_dotenv()
 import argparse
 
 from utils.logger import LOGGER
+from config.config import SERVER_IP, RCON_PORT, RCON_PWD
+from services.blockSetter import BlockSetter
 from services.parse_midi import parse_midi
 from services.transform_block import transform_block
-from services.make_block import make_block
+from services.make_block import MakeBlock
 
 
 if __name__ == "__main__":
@@ -45,10 +47,28 @@ if __name__ == "__main__":
     all_block_info = transform_block(midi_info, TPS=TPS)
     LOGGER.info("转换完成")
 
-    input("按下回车继续...")
+    maker = MakeBlock(SX, SY, SZ, track_gap=TRACK_GAP)
+    blocks = maker.build(all_block_info)
+    LOGGER.info("=============信息统计=============")
+    LOGGER.info(f"音乐时长: {midi_info['total_duration'] / 1e6:.2f}s  |  TPS: {TPS}")
+    LOGGER.info(f"轨道数: {midi_info['num_tracks']}  |  方块数量: {len(blocks)}")
+    LOGGER.info(f"起始坐标: ({SX}, {SY}, {SZ})  | "
+                f"终点坐标: ({SX + midi_info['num_tracks'] * (TRACK_GAP + 1)}, {SY}, {SZ + len(blocks) - 1})")
+    LOGGER.info("===============END==============")
 
-    LOGGER.info("正在放置方块...")
-    make_block(all_block_info, SX, SY, SZ, track_gap=TRACK_GAP)
-    LOGGER.info("放置完成")
+    if not args.auto_confirm:
+        confirm = input("确认开始放置？(y/n): ").strip().lower()
+        if confirm != "y":
+            print("已取消放置")
+            exit(0)
+
+    block_setter = BlockSetter()
+    block_setter.connect(
+        server_ip=SERVER_IP,
+        rcon_port=RCON_PORT,
+        rcon_pwd=RCON_PWD
+    )
+    block_setter.place_block(blocks)
+    block_setter.close()
 
     LOGGER.info("All work done.")
