@@ -1,7 +1,5 @@
 from utils.logger import LOGGER
-from config import config
 from utils.constants import BlockType, BlockEntry
-from services.blockSetter import BlockSetter
 
 
 def get_sync_notes_pos(notes_num: int) -> list[dict]:
