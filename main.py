@@ -5,7 +5,7 @@ import argparse
 
 from utils.logger import LOGGER
 from config.config import SERVER_IP, RCON_PORT, RCON_PWD
-from services.blcok_placer.rcon_placer import RconBlockPlacer
+from services.block_placer.rcon_placer import RconBlockPlacer
 from services.parse_midi import parse_midi
 from services.transform_block import transform_block
 from services.make_block import MakeBlock
@@ -14,7 +14,7 @@ from services.make_block import MakeBlock
 if __name__ == "__main__":
     LOGGER.info("Welcome to My Project.")
 
-    SX, SY, SZ = 390, -60, -3000
+    SX, SY, SZ = 380, -60, -3000
     TPS = 16.0
     MIDI_FILE = "data/midi/60BPM_G_River Flows In You.mid"
     TRACK_GAP = 3
@@ -58,12 +58,16 @@ if __name__ == "__main__":
 
     maker = MakeBlock(SX, SY, SZ, track_gap=TRACK_GAP)
     blocks = maker.build(all_block_info)
+
+    EX = SX + (midi_info['num_tracks'] - 1) * (TRACK_GAP + 1)
+    EY = SY
+    EZ = SZ + maker.get_track_len() - 1
     LOGGER.info("=============信息统计=============")
     LOGGER.info(f"音乐时长: {midi_info['total_duration'] / 1e6:.2f}s  |  TPS: {TPS}")
     LOGGER.info(f"放置模式: {MODE}")
     LOGGER.info(f"轨道数: {midi_info['num_tracks']}  |  方块数量: {len(blocks)}")
     LOGGER.info(f"起始坐标: ({SX}, {SY}, {SZ})  | "
-                f"终点坐标: ({SX + (midi_info['num_tracks'] - 1) * (TRACK_GAP + 1)}, {SY}, {SZ + maker.get_track_len() - 1})")
+                f"终点坐标: ({EX}, {SY}, {EZ})")
     LOGGER.info("===============END==============")
 
     if not AUTO_CONFIRM:
@@ -76,7 +80,8 @@ if __name__ == "__main__":
         placer = RconBlockPlacer(
             host=SERVER_IP,
             port=RCON_PORT,
-            pwd=RCON_PWD
+            pwd=RCON_PWD,
+            auto_unload=True
         )
     else:
         raise ValueError(f"不支持的放置模式: {MODE}")
