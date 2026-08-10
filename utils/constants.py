@@ -12,6 +12,16 @@ class BlockType:
     REDSTONE_BLOCK = "minecraft:redstone_block"
 
 
+class CommandSuccessResult:
+    FORCELOAD_ADD = "to be force loaded"
+    FORCELOAD_REMOVE = "for force loading"
+    SETBLOCK = "Changed the block at"
+
+    COMMON_ERROR_KEYWORDS = [
+        "error", "unknown", "cannot", "invalid",
+        "not found", "not loaded", "outside of the world"
+    ]
+
 @dataclass
 class BlockEntry:
     block_id: BlockType

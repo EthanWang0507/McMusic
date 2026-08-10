@@ -14,7 +14,7 @@ from services.make_block import MakeBlock
 if __name__ == "__main__":
     LOGGER.info("Welcome to My Project.")
 
-    SX, SY, SZ = 380, -60, -3000
+    SX, SY, SZ = 370, -60, -3000
     TPS = 16.0
     MIDI_FILE = "data/midi/60BPM_G_River Flows In You.mid"
     TRACK_GAP = 3
@@ -81,7 +81,8 @@ if __name__ == "__main__":
             host=SERVER_IP,
             port=RCON_PORT,
             pwd=RCON_PWD,
-            auto_unload=True
+            auto_unload=True,
+            auto_confirm=AUTO_CONFIRM
         )
     else:
         raise ValueError(f"不支持的放置模式: {MODE}")
