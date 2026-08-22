@@ -7,13 +7,12 @@ from services.block_placer.base import BlockPlacer
 
 
 class RconBlockPlacer(BlockPlacer):
-    def __init__(self, host: str, port: int, pwd: str, auto_unload: bool = True, auto_confirm: bool = False) -> None:
+    def __init__(self, host: str, port: int, pwd: str) -> None:
         self.host = host
         self.port = port
         self.pwd = pwd
-        self.auto_unload = auto_unload
-        self.auto_confirm = auto_confirm
 
+        self.__track_len = 0
         self._mcr = None
         self._loaded_chunks: list[tuple[int, int, int, int]] = []
 
@@ -178,11 +177,11 @@ class RconBlockPlacer(BlockPlacer):
             self._execute_cmd(f"/forceload remove {x1} {z1} {x2} {z2}")
         LOGGER.info("区块卸载完成。")
 
-    def place_blocks(self, blocks: list[BlockEntry], show_progress: bool = True) -> None:
-        """批量放置方块列表，支持进度显示"""
+    def _check(self, blocks: list[BlockEntry]) -> bool:
+        """检查放置方案的可行性"""
         if not blocks:
             LOGGER.warning("方块列表为空，跳过放置")
-            return
+            return False
         # 计算实际放置的坐标边界
         min_x = min(b.x for b in blocks)
         max_x = max(b.x for b in blocks)
@@ -192,14 +191,15 @@ class RconBlockPlacer(BlockPlacer):
 
         if not self._is_area_all_air(blocks):
             LOGGER.error("在指定的范围内存在非空方块，无法生成轨道。")
-            return
+            return False
+        return True
 
-        LOGGER.info("检查通过")
-        if not self.auto_confirm:
-            confirm = input("确认开始放置？(Y/n): ").strip()
-            if confirm != "Y":
-                LOGGER.info("已取消放置")
-                return
+    def place_blocks(self, blocks: list[BlockEntry], show_progress: bool = True) -> None:
+        """批量放置方块列表，支持进度显示"""
+        res = self._check(blocks)
+        if not res:  # 可行性检查
+            LOGGER.error("可行性检查不通过，结束放置。")
+            return
 
         begin_time = time.time()
         total = len(blocks)
@@ -217,7 +217,8 @@ class RconBlockPlacer(BlockPlacer):
         LOGGER.info(f"所有方块放置完成, 耗时{time.time() - begin_time} s")
 
     def teardown(self) -> None:
-        if self.auto_unload:
+        if self._loaded_chunks:
             self._unload_chunks()
-        self._mcr.disconnect()
+        if self._mcr:
+            self._mcr.disconnect()
         LOGGER.info("连接断开")

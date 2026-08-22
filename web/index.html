@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>McMusic - MIDI 红石音乐生成器</title>
+<style>
+  :root {
+    --bg: #1A1B26;
+    --bg-card: #252636;
+    --bg-hover: #2F3045;
+    --bg-input: #1E1F2E;
+    --primary: #55A84F;
+    --primary-hover: #6BC465;
+    --primary-dim: #3A7A36;
+    --accent: #7AA2F7;
+    --text: #E0E0E0;
+    --text-secondary: #8A8DAA;
+    --text-muted: #5A5D78;
+    --border: #3A3D5C;
+    --success: #9ECE6A;
+    --warning: #E0AF68;
+    --error: #F7768E;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .app {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+  }
+
+  /* ===== 顶部栏 ===== */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+  }
+  .logo-icon { font-size: 22px; }
+  .subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-left: 4px;
+  }
+  .settings-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .settings-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+    border-color: var(--primary-dim);
+  }
+
+  /* ===== 步骤指示器 ===== */
+  .stepper {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding: 0 8px;
+    position: relative;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    position: relative;
+    z-index: 2;
+  }
+  .step-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    color: var(--text-muted);
+    transition: var(--transition);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 3;
+  }
+  .step.active .step-circle {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(85, 168, 79, 0.15);
+  }
+  .step.completed .step-circle {
+    background: var(--success);
+    border-color: var(--success);
+    color: var(--bg);
+  }
+  .step-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+  .step.active .step-label { color: var(--text); }
+  .step.completed .step-label { color: var(--success); }
+
+  /* 连接线 - 只在圆圈之间，不侵入圆圈 */
+  .step-connector {
+    position: absolute;
+    top: 19px;
+    left: calc(50% + 22px);
+    right: calc(-50% + 22px);
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    z-index: 1;
+    overflow: hidden;
+  }
+  .step-connector-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--success);
+    border-radius: 2px;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .step.completed .step-connector-fill { width: 100%; }
+
+  /* ===== 内容卡片 ===== */
+  .content-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 28px;
+    min-height: 380px;
+    position: relative;
+    overflow: hidden;
+    animation: slideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .page-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .page-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+  }
+
+  /* ===== 表单元素 ===== */
+  .form-group { margin-bottom: 18px; }
+  .form-label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .form-input {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    transition: var(--transition);
+    outline: none;
+  }
+  .form-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(85, 168, 79, 0.12);
+  }
+  .form-input::placeholder { color: var(--text-muted); }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .coord-row {
+    display: flex;
+    gap: 12px;
+  }
+  .coord-item { flex: 1; }
+  .coord-item .form-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .coord-axis {
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* ===== 文件上传 ===== */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    background: var(--bg-input);
+    margin-bottom: 20px;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--primary);
+    background: rgba(85, 168, 79, 0.05);
+  }
+  .upload-icon { font-size: 36px; margin-bottom: 10px; }
+  .upload-text {
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .upload-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .file-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .file-icon { font-size: 20px; }
+  .file-name {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-size { font-size: 12px; color: var(--text-muted); }
+  .file-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    transition: var(--transition);
+  }
+  .file-remove:hover { color: var(--error); }
+
+  /* ===== 信息卡片 ===== */
+  .info-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .info-card {
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    border: 1px solid var(--border);
+  }
+  .info-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .info-card-title.midi { color: var(--accent); }
+  .info-card-title.block { color: var(--primary); }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 3px 0;
+  }
+  .info-row-label { color: var(--text-secondary); }
+  .info-row-value { color: var(--text); font-weight: 500; }
+
+  /* ===== 模式选择 ===== */
+  .mode-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .mode-card {
+    background: var(--bg-input);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 18px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .mode-card:hover {
+    border-color: var(--primary-dim);
+    background: var(--bg-hover);
+  }
+  .mode-card.selected {
+    border-color: var(--primary);
+    background: rgba(85, 168, 79, 0.08);
+  }
+  .mode-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mode-card.selected .mode-card-title { color: var(--primary); }
+  .mode-card-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ===== 开关 ===== */
+  .switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+  }
+  .switch-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .switch {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    background: var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+    flex-shrink: 0;
+  }
+  .switch.on { background: var(--primary); }
+  .switch-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    transition: var(--transition);
+  }
+  .switch.on .switch-knob { left: 21px; }
+
+  /* ===== 检查列表 ===== */
+  .check-list {
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    margin-bottom: 16px;
+  }
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-icon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .check-icon.pending { color: var(--warning); animation: pulse 1.2s infinite; }
+  .check-icon.success { color: var(--success); }
+  .check-icon.error { color: var(--error); }
+  .check-icon.skip { color: var(--text-muted); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .check-name {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .check-item.done .check-name { color: var(--text); }
+  .check-detail { font-size: 11px; color: var(--text-muted); }
+
+  /* ===== 摘要卡 ===== */
+  .summary-card {
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+  .summary-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 8px;
+  }
+  .summary-row {
+    display: flex;
+    font-size: 12px;
+    padding: 2px 0;
+  }
+  .summary-label { color: var(--text-secondary); width: 90px; flex-shrink: 0; }
+  .summary-value { color: var(--text); }
+
+  /* ===== 进度 ===== */
+  .progress-bar {
+    width: 100%;
+    height: 10px;
+    background: var(--bg-input);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--success));
+    border-radius: 5px;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+  .progress-text {
+    text-align: right;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 18px;
+  }
+
+  /* ===== 日志 ===== */
+  .log-box {
+    background: #0D0E16;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    height: 180px;
+    overflow-y: auto;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .log-line { color: var(--text-secondary); }
+  .log-line.info { color: var(--accent); }
+  .log-line.success { color: var(--success); }
+  .log-line.error { color: var(--error); }
+  .log-line.warn { color: var(--warning); }
+  .log-box::-webkit-scrollbar { width: 6px; }
+  .log-box::-webkit-scrollbar-track { background: transparent; }
+  .log-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ===== 结果卡 ===== */
+  .result-card {
+    background: rgba(158, 206, 106, 0.08);
+    border: 1px solid var(--success);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    margin-bottom: 16px;
+    animation: fadeIn 0.4s ease;
+  }
+  .result-card.error {
+    background: rgba(247, 118, 142, 0.08);
+    border-color: var(--error);
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .result-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--success);
+    margin-bottom: 8px;
+  }
+  .result-card.error .result-title { color: var(--error); }
+  .result-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* ===== 加载状态 ===== */
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  /* ===== 底部导航 ===== */
+  .nav-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+  }
+  .btn {
+    padding: 11px 24px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-secondary {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--text-muted);
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(85, 168, 79, 0.3);
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ===== 设置抽屉 ===== */
+  .drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--transition);
+  }
+  .drawer-overlay.open {
+    opacity: 1;
+    visibility: visible;
+  }
+  .drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 400px;
+    max-width: 90vw;
+    height: 100vh;
+    background: var(--bg-card);
+    border-left: 1px solid var(--border);
+    z-index: 101;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .drawer-title {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .drawer-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: var(--transition);
+  }
+  .drawer-close:hover { color: var(--text); }
+  .drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+  }
+  .drawer-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+  }
+  .settings-section {
+    margin-bottom: 24px;
+  }
+  .settings-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+
+  /* ===== 提示 ===== */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 20px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 200;
+    opacity: 0;
+    transition: var(--transition);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast.success { border-color: var(--success); }
+  .toast.error { border-color: var(--error); }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- 顶部栏 -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="logo-icon">♪</span>
+      <span class="logo">McMusic</span>
+      <span class="subtitle">MIDI → Minecraft 红石音乐</span>
+    </div>
+    <button class="settings-btn" onclick="openDrawer()">
+      ⚙ 默认设置
+    </button>
+  </div>
+
+  <!-- 步骤指示器 -->
+  <div class="stepper" id="stepper"></div>
+
+  <!-- 内容区 -->
+  <div id="content"></div>
+
+  <!-- 底部导航 -->
+  <div class="nav-bar">
+    <button class="btn btn-secondary" id="prevBtn" onclick="prevStep()" style="visibility:hidden">← 上一步</button>
+    <button class="btn btn-primary" id="nextBtn" onclick="nextStep()">下一步 →</button>
+  </div>
+</div>
+
+<!-- 设置抽屉 -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <span class="drawer-title">⚙ 默认设置</span>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-footer">
+    <button class="btn btn-secondary" style="flex:1" onclick="resetDefaults()">重置</button>
+    <button class="btn btn-primary" style="flex:1" onclick="saveDefaults()">保存</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== 状态管理 =====================
+const STEPS = ['选择文件', '解析预览', '模式配置', '检查确认', '放置完成'];
+const DEFAULT_CONFIG = {
+  tps: 20.0, track_gap: 3, sx: 0, sy: 0, sz: 0,
+  place_mode: 'rcon', auto_confirm: false,
+  rcon_host: '127.0.0.1', rcon_port: 25575, rcon_pwd: '', rcon_auto_unload: true,
+  mcfunction_output: 'output.mcfunction'
+};
+
+let state = {
+  step: 0,
+  config: { ...DEFAULT_CONFIG },
+  file: null,
+  parseResultMap: new Map(),
+  parseHash: null,
+  midiIsParsed: false,
+  placeMode: 'rcon',
+  checks: [],
+  progress: 0,
+  logs: []
+};
+
+// 加载 localStorage
+function loadConfig() {
+  try {
+    const saved = localStorage.getItem('mcmusic_defaults');
+    if (saved) state.config = { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+  } catch(e) {}
+}
+loadConfig();
+
+// ===================== 步骤指示器 =====================
+function renderStepper() {
+  const el = document.getElementById('stepper');
+  el.innerHTML = STEPS.map((label, i) => `
+    <div class="step ${i < state.step ? 'completed' : ''} ${i === state.step ? 'active' : ''}">
+      <div class="step-circle">${i < state.step ? '✓' : i + 1}</div>
+      <div class="step-label">${label}</div>
+      ${i < STEPS.length - 1 ? '<div class="step-connector"><div class="step-connector-fill"></div></div>' : ''}
+    </div>
+  `).join('');
+}
+
+// ===================== 页面渲染 =====================
+function renderPage() {
+  const content = document.getElementById('content');
+  content.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'content-card';
+
+  switch(state.step) {
+    case 0: card.innerHTML = renderStep1(); break;
+    case 1: card.innerHTML = renderStep2(); break;
+    case 2: card.innerHTML = renderStep3(); break;
+    case 3: card.innerHTML = renderStep4(); break;
+    case 4: card.innerHTML = renderStep5(); break;
+  }
+  content.appendChild(card);
+
+  // 页面特定的初始化
+  if (state.step === 0) initStep1();
+  if (state.step === 1) initStep2();
+  if (state.step === 4) initStep5();
+
+  updateNavButtons();
+}
+
+function updateNavButtons() {
+  const prev = document.getElementById('prevBtn');
+  const next = document.getElementById('nextBtn');
+  prev.style.visibility = state.step === 0 ? 'hidden' : 'visible';
+
+  if (state.step === STEPS.length - 1) {
+    next.textContent = '完成';
+    next.disabled = false;
+  } else if (state.step === 3) {
+    next.textContent = '开始放置 →';
+    next.disabled = !state.checks.every(c => c.status !== 'pending');
+  } else if (state.step === 0) {
+    next.textContent = '下一步 →';
+    next.disabled = !state.file;
+  } else {
+    next.textContent = '下一步 →';
+    next.disabled = false;
+  }
+}
+
+// ===================== 步骤1：文件选择 =====================
+function renderStep1() {
+  state.midiIsParsed = false;
+  const c = state.config;
+  return `
+    <div class="page-title">选择 MIDI 文件与基础参数</div>
+    <div class="page-desc">选择要转换的 MIDI 文件，并设置放置的基础参数</div>
+
+    <div id="uploadArea">
+      ${state.file ? `
+        <div class="file-info">
+          <span class="file-icon">🎵</span>
+          <span class="file-name">${state.file.name}</span>
+          <span class="file-size">${formatSize(state.file.size)}</span>
+          <button class="file-remove" onclick="removeFile()">×</button>
+        </div>
+      ` : `
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <div class="upload-icon">📂</div>
+          <div class="upload-text">点击或拖拽 MIDI 文件到此处</div>
+          <div class="upload-hint">支持 .mid / .midi 格式</div>
+        </div>
+        <input type="file" id="fileInput" accept=".mid,.midi" style="display:none">
+      `}
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">TPS（每秒刻数）</label>
+        <input class="form-input" type="number" step="0.1" value="${c.tps}" id="inputTps">
+      </div>
+      <div class="form-group">
+        <label class="form-label">轨道间隔</label>
+        <input class="form-input" type="number" value="${c.track_gap}" id="inputTrackGap">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">起始坐标</label>
+      <div class="coord-row">
+        <div class="coord-item">
+          <label class="form-label"><span class="coord-axis">X</span></label>
+          <input class="form-input" type="number" value="${c.sx}" id="inputSx">
+        </div>
+        <div class="coord-item">
+          <label class="form-label"><span class="coord-axis">Y</span></label>
+          <input class="form-input" type="number" value="${c.sy}" id="inputSy">
+        </div>
+        <div class="coord-item">
+          <label class="form-label"><span class="coord-axis">Z</span></label>
+          <input class="form-input" type="number" value="${c.sz}" id="inputSz">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function initStep1() {
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleFile(e.target.files[0]);
+    });
+  }
+  if (dropZone) {
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+  }
+}
+
+function handleFile(file) {
+  if (!file.name.match(/\.(mid|midi)$/i)) {
+    showToast('请选择 .mid 或 .midi 文件', 'error');
+    return;
+  }
+  state.file = file;
+  renderPage();
+}
+
+function removeFile() {
+  state.file = null;
+  renderPage();
+}
+
+// ===================== 步骤2：解析预览 =====================
+function renderStep2() {
+  if (!state.midiIsParsed) {
+    return `
+      <div class="page-title">解析预览与模式选择</div>
+      <div class="page-desc">正在解析 MIDI 文件，请稍候...</div>
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <div class="loading-text">正在解析 MIDI 文件...</div>
+      </div>
+    `;
+  }
+  const r = state.parseResultMap.get(state.parseHash);
+  return `
+    <div class="page-title">解析预览与模式选择</div>
+    <div class="page-desc">查看 MIDI 解析结果和方块统计，选择放置模式</div>
+
+    <div class="info-cards">
+      <div class="info-card">
+        <div class="info-card-title midi">🎵 MIDI 信息</div>
+        <div class="info-row"><span class="info-row-label">音乐时长</span><span class="info-row-value">${r.duration} 秒</span></div>
+        <div class="info-row"><span class="info-row-label">轨道数</span><span class="info-row-value">${r.tracks}</span></div>
+        <div class="info-row"><span class="info-row-label">PPQN</span><span class="info-row-value">${r.ppqn}</span></div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title block">🧱 方块统计</div>
+        <div class="info-row"><span class="info-row-label">方块数量</span><span class="info-row-value">${r.block_count}</span></div>
+        <div class="info-row"><span class="info-row-label">起始坐标</span><span class="info-row-value">(${r.start_x}, ${r.start_y}, ${r.start_z})</span></div>
+        <div class="info-row"><span class="info-row-label">终点坐标</span><span class="info-row-value">(${r.end_x}, ${r.end_y}, ${r.end_z})</span></div>
+      </div>
+    </div>
+
+    <div class="form-label" style="margin-bottom:10px">选择放置模式</div>
+    <div class="mode-cards">
+      <div class="mode-card ${state.placeMode === 'rcon' ? 'selected' : ''}" onclick="selectMode('rcon')">
+        <div class="mode-card-title">🖥 RCON 在线放置</div>
+        <div class="mode-card-desc">直接连接 Minecraft 服务器，在线实时放置方块</div>
+      </div>
+      <div class="mode-card ${state.placeMode === 'mcfunction' ? 'selected' : ''}" onclick="selectMode('mcfunction')">
+        <div class="mode-card-title">📄 mcfunction 导出</div>
+        <div class="mode-card-desc">导出为 .mcfunction 文件，手动在游戏中执行</div>
+      </div>
+    </div>
+  `;
+}
+
+async function initStep2() {
+  if (state.midiIsParsed) return ;
+  console.log('开始解析 MIDI 文件');
+
+  const c = state.config;
+  const formData = new FormData();
+  formData.append("file", state.file);
+  formData.append("tps", c.tps);
+  formData.append("sx", c.sx);
+  formData.append("sy", c.sy);
+  formData.append("sz", c.sz);
+  formData.append("track_gap", c.track_gap);
+
+  state.parseHash = await hashFormData(formData);
+
+  if (state.parseResultMap.size > 0 && state.parseResultMap.has(state.parseHash)) {
+    state.midiIsParsed = true;
+    console.log('使用缓存结果');
+    renderPage();
+    return ;
+  }
+
+  fetch("/api/parse", {
+    method: "POST",
+    body: formData
+  })
+    .then(response => {
+      if (response.ok) {
+        return response.json();
+      } else {
+          showToast('Midi文件解析失败, 请重试。', 'error');
+        throw new Error("请求失败");
+      }
+    })
+    .then(data => {
+      state.midiIsParsed = true;
+      state.parseResultMap.set(state.parseHash, {
+          start_x: data.start_x,
+          start_y: data.start_y,
+          start_z: data.start_z,
+          end_x: data.end_x,
+          end_y: data.end_y,
+          end_z: data.end_z,
+          duration: data.duration,
+          tracks: data.tracks,
+          ppqn: data.ppqn,
+          block_count: data.block_count
+      });
+      renderPage();
+    })
+    .catch(error => {
+      showToast(error.message, 'error');
+    });
+}
+
+function selectMode(mode) {
+  state.placeMode = mode;
+  state.config.place_mode = mode;
+  renderPage();
+}
+
+// ===================== 步骤3：模式配置 =====================
+function renderStep3() {
+  const c = state.config;
+  if (state.placeMode === 'rcon') {
+    return `
+      <div class="page-title">RCON 连接配置</div>
+      <div class="page-desc">配置 Minecraft 服务器的 RCON 连接参数</div>
+      <div class="form-group">
+        <label class="form-label">服务器地址</label>
+        <input class="form-input" value="${c.rcon_host}" id="inputRconHost">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">RCON 端口</label>
+          <input class="form-input" type="number" value="${c.rcon_port}" id="inputRconPort">
+        </div>
+        <div class="form-group">
+          <label class="form-label">RCON 密码</label>
+          <input class="form-input" type="password" value="${c.rcon_pwd}" id="inputRconPwd">
+        </div>
+      </div>
+      <div class="switch-row">
+        <span class="switch-label">放置后自动卸载区块</span>
+        <div class="switch ${c.rcon_auto_unload ? 'on' : ''}" onclick="toggleSwitch('rcon_auto_unload')">
+          <div class="switch-knob"></div>
+        </div>
+      </div>
+    `;
+  } else {
+    return `
+      <div class="page-title">mcfunction 导出配置</div>
+      <div class="page-desc">配置导出文件的参数</div>
+      <div class="form-group">
+        <label class="form-label">输出文件名</label>
+        <input class="form-input" value="${c.mcfunction_output}" id="inputMcfunctionOutput">
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px">
+        💡 文件将保存在项目 data/temp/ 目录下
+      </div>
+    `;
+  }
+}
+
+function toggleSwitch(key) {
+  state.config[key] = !state.config[key];
+  renderPage();
+}
+
+// ===================== 步骤4：检查确认 =====================
+function renderStep4() {
+  const checksHTML = state.checks.map(c => `
+    <div class="check-item ${c.status !== 'pending' ? 'done' : ''}">
+      <div class="check-icon ${c.status}">
+        ${c.status === 'pending' ? '⏳' : c.status === 'success' ? '✅' : c.status === 'error' ? '❌' : '⏭'}
+      </div>
+      <span class="check-name">${c.name}</span>
+      ${c.detail ? `<span class="check-detail">${c.detail}</span>` : ''}
+    </div>
+  `).join('');
+
+  const r = state.parseResultMap || {};
+  return `
+    <div class="page-title">前置检查与确认</div>
+    <div class="page-desc">系统将检查放置条件，请确认后开始放置</div>
+
+    <div class="check-list">${checksHTML}</div>
+
+    <div class="summary-card">
+      <div class="summary-title">📋 放置摘要</div>
+      <div class="summary-row"><span class="summary-label">文件</span><span class="summary-value">${state.file ? state.file.name : '--'}</span></div>
+      <div class="summary-row"><span class="summary-label">模式</span><span class="summary-value">${state.placeMode === 'rcon' ? 'RCON 在线放置' : 'mcfunction 导出'}</span></div>
+      <div class="summary-row"><span class="summary-label">方块数量</span><span class="summary-value">${r.block_count || '--'}</span></div>
+      <div class="summary-row"><span class="summary-label">TPS</span><span class="summary-value">${state.config.tps}</span></div>
+    </div>
+
+    <div class="switch-row">
+      <span class="switch-label">自动确认（跳过此步骤直接放置）</span>
+      <div class="switch ${state.config.auto_confirm ? 'on' : ''}" onclick="toggleSwitch('auto_confirm')">
+        <div class="switch-knob"></div>
+      </div>
+    </div>
+  `;
+}
+
+function runChecks() {
+  state.checks = [
+    { name: 'MIDI 文件解析', status: 'pending', detail: '' },
+    { name: '方块序列生成', status: 'pending', detail: '' },
+    { name: 'RCON 服务器连接', status: 'pending', detail: '' },
+    { name: '放置区域可用性', status: 'pending', detail: '' }
+  ];
+  renderPage();
+
+  const checks = state.checks;
+  checks.forEach((check, i) => {
+    setTimeout(() => {
+      if (i === 2 && state.placeMode === 'mcfunction') {
+        check.status = 'skip';
+        check.detail = 'mcfunction 模式无需连接';
+      } else {
+        check.status = 'success';
+      }
+      renderPage();
+    }, 600 * (i + 1));
+  });
+}
+
+// ===================== 步骤5：放置进度 =====================
+function renderStep5() {
+  return `
+    <div class="page-title">放置进度</div>
+    <div class="page-desc" id="step5Subtitle">正在放置方块，请稍候...</div>
+
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:${state.progress}%"></div></div>
+    <div class="progress-text" id="progressText">${state.progress.toFixed(1)}%</div>
+
+    <div class="form-label" style="margin-bottom:8px">运行日志</div>
+    <div class="log-box" id="logBox">
+      ${state.logs.map(l => `<div class="log-line ${l.type}">[${l.time}] ${l.msg}</div>`).join('')}
+    </div>
+
+    <div id="resultArea"></div>
+  `;
+}
+
+function initStep5() {
+  state.progress = 0;
+  state.logs = [];
+  startPlacement();
+}
+
+function startPlacement() {
+  const total = state.parseResultMap ? state.parseResultMap.block_count : 1000;
+  addLog('info', `连接服务器 ${state.config.rcon_host}:${state.config.rcon_port}...`);
+
+  setTimeout(() => {
+    addLog('success', '连接成功，开始放置方块...');
+    addLog('info', `共 ${total} 个方块待放置`);
+
+    let placed = 0;
+    const interval = setInterval(() => {
+      const batch = Math.floor(Math.random() * 80) + 20;
+      placed = Math.min(placed + batch, total);
+      state.progress = (placed / total) * 100;
+
+      document.getElementById('progressFill').style.width = state.progress + '%';
+      document.getElementById('progressText').textContent = state.progress.toFixed(1) + '%';
+
+      if (placed % 200 < batch) {
+        addLog('info', `已放置 ${placed}/${total} (${state.progress.toFixed(1)}%)`);
+      }
+
+      if (placed >= total) {
+        clearInterval(interval);
+        finishPlacement(total);
+      }
+    }, 150);
+  }, 800);
+}
+
+function finishPlacement(total) {
+  addLog('success', `所有方块放置完成！共 ${total} 个`);
+  document.getElementById('step5Subtitle').textContent = '✅ 放置完成！';
+  document.getElementById('step5Subtitle').style.color = 'var(--success)';
+
+  const elapsed = (Math.random() * 30 + 10).toFixed(1);
+  document.getElementById('resultArea').innerHTML = `
+    <div class="result-card">
+      <div class="result-title">🎉 放置成功</div>
+      <div class="result-text">
+        成功放置 ${total} 个方块<br>
+        耗时：${elapsed} 秒<br>
+        起始坐标：(${state.config.sx}, ${state.config.sy}, ${state.config.sz})
+      </div>
+    </div>
+  `;
+  updateNavButtons();
+}
+
+function addLog(type, msg) {
+  const now = new Date();
+  const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+  state.logs.push({ type, msg, time });
+  const logBox = document.getElementById('logBox');
+  if (logBox) {
+    logBox.innerHTML += `<div class="log-line ${type}">[${time}] ${msg}</div>`;
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+}
+
+// ===================== 导航 =====================
+function nextStep() {
+  if (state.step === STEPS.length - 1) {
+    // 完成，重置
+    state.step = 0;
+    state.file = null;
+    state.parseResultMap = null;
+    state.checks = [];
+    state.progress = 0;
+    state.logs = [];
+    renderStepper();
+    renderPage();
+    return;
+  }
+
+  // 收集当前步骤的输入
+  collectInputs();
+
+  if (state.step === 0 && !state.file) {
+    showToast('请先选择 MIDI 文件', 'error');
+    return;
+  }
+
+  state.step++;
+  renderStepper();
+  renderPage();
+
+  if (state.step === 3) runChecks();
+}
+
+function prevStep() {
+  if (state.step > 0) {
+    collectInputs();
+    state.step--;
+    renderStepper();
+    renderPage();
+  }
+}
+
+function collectInputs() {
+  const getVal = (id) => document.getElementById(id)?.value;
+  if (state.step === 0) {
+    state.config.tps = parseFloat(getVal('inputTps')) || 20;
+    state.config.track_gap = parseInt(getVal('inputTrackGap')) || 3;
+    state.config.sx = parseInt(getVal('inputSx')) || 0;
+    state.config.sy = parseInt(getVal('inputSy')) || 0;
+    state.config.sz = parseInt(getVal('inputSz')) || 0;
+  }
+  if (state.step === 2 && state.placeMode === 'rcon') {
+    state.config.rcon_host = getVal('inputRconHost') || '127.0.0.1';
+    state.config.rcon_port = parseInt(getVal('inputRconPort')) || 25575;
+    state.config.rcon_pwd = getVal('inputRconPwd') || '';
+  }
+  if (state.step === 2 && state.placeMode === 'mcfunction') {
+    state.config.mcfunction_output = getVal('inputMcfunctionOutput') || 'output.mcfunction';
+  }
+}
+
+// ===================== 设置抽屉 =====================
+function openDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+  renderDrawer();
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+function renderDrawer() {
+  const c = state.config;
+  document.getElementById('drawerBody').innerHTML = `
+    <div class="settings-section">
+      <div class="settings-section-title">通用参数</div>
+      <div class="form-group">
+        <label class="form-label">TPS（每秒刻数）</label>
+        <input class="form-input" type="number" step="0.1" value="${c.tps}" id="setTps">
+      </div>
+      <div class="form-group">
+        <label class="form-label">轨道间隔</label>
+        <input class="form-input" type="number" value="${c.track_gap}" id="setTrackGap">
+      </div>
+      <div class="form-group">
+        <label class="form-label">起始坐标 X / Y / Z</label>
+        <div class="coord-row">
+          <input class="form-input" type="number" value="${c.sx}" id="setSx">
+          <input class="form-input" type="number" value="${c.sy}" id="setSy">
+          <input class="form-input" type="number" value="${c.sz}" id="setSz">
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">放置模式</div>
+      <div class="mode-cards" style="grid-template-columns:1fr">
+        <div class="mode-card ${c.place_mode === 'rcon' ? 'selected' : ''}" onclick="setDefaultMode('rcon')" style="padding:12px">
+          <div class="mode-card-title" style="font-size:13px">🖥 RCON 在线放置</div>
+        </div>
+        <div class="mode-card ${c.place_mode === 'mcfunction' ? 'selected' : ''}" onclick="setDefaultMode('mcfunction')" style="padding:12px">
+          <div class="mode-card-title" style="font-size:13px">📄 mcfunction 导出</div>
+        </div>
+      </div>
+      <div class="switch-row">
+        <span class="switch-label">自动确认放置</span>
+        <div class="switch ${c.auto_confirm ? 'on' : ''}" onclick="setDefaultSwitch('auto_confirm')">
+          <div class="switch-knob"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">RCON 连接</div>
+      <div class="form-group">
+        <label class="form-label">服务器地址</label>
+        <input class="form-input" value="${c.rcon_host}" id="setRconHost">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">端口</label>
+          <input class="form-input" type="number" value="${c.rcon_port}" id="setRconPort">
+        </div>
+        <div class="form-group">
+          <label class="form-label">密码</label>
+          <input class="form-input" type="password" value="${c.rcon_pwd}" id="setRconPwd">
+        </div>
+      </div>
+      <div class="switch-row">
+        <span class="switch-label">自动卸载区块</span>
+        <div class="switch ${c.rcon_auto_unload ? 'on' : ''}" onclick="setDefaultSwitch('rcon_auto_unload')">
+          <div class="switch-knob"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">mcfunction 导出</div>
+      <div class="form-group">
+        <label class="form-label">输出文件名</label>
+        <input class="form-input" value="${c.mcfunction_output}" id="setMcfunctionOutput">
+      </div>
+    </div>
+  `;
+}
+
+function setDefaultMode(mode) {
+  state.config.place_mode = mode;
+  renderDrawer();
+}
+
+function setDefaultSwitch(key) {
+  state.config[key] = !state.config[key];
+  renderDrawer();
+}
+
+function saveDefaults() {
+  const getVal = (id) => document.getElementById(id)?.value;
+  state.config.tps = parseFloat(getVal('setTps')) || 20;
+  state.config.track_gap = parseInt(getVal('setTrackGap')) || 3;
+  state.config.sx = parseInt(getVal('setSx')) || 0;
+  state.config.sy = parseInt(getVal('setSy')) || 0;
+  state.config.sz = parseInt(getVal('setSz')) || 0;
+  state.config.rcon_host = getVal('setRconHost') || '127.0.0.1';
+  state.config.rcon_port = parseInt(getVal('setRconPort')) || 25575;
+  state.config.rcon_pwd = getVal('setRconPwd') || '';
+  state.config.mcfunction_output = getVal('setMcfunctionOutput') || 'output.mcfunction';
+
+  localStorage.setItem('mcmusic_defaults', JSON.stringify(state.config));
+  closeDrawer();
+  showToast('默认设置已保存', 'success');
+  renderPage();
+}
+
+function resetDefaults() {
+  state.config = { ...DEFAULT_CONFIG };
+  localStorage.removeItem('mcmusic_defaults');
+  renderDrawer();
+  showToast('已重置为默认值', 'success');
+}
+
+// ===================== 工具函数 =====================
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+/**
+ * 计算包含文件的 FormData 完整哈希（SHA-256）
+ */
+async function hashFormData(formData, options = {}) {
+  const {
+    sort = false,
+    includeFileName = false,
+    algorithm = 'SHA-256'
+  } = options;
+
+  const items = [];
+
+  // 遍历所有条目（包含同名多值）
+  for (const [key, value] of formData.entries()) {
+    if (value instanceof File || value instanceof Blob) {
+      // 二进制内容：计算文件内容哈希
+      const buffer = await value.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest(algorithm, buffer);
+      const hashHex = Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      // 可选：将文件名纳入哈希
+      const namePart = includeFileName && value.name ? `:${value.name}` : '';
+      items.push([key, `file:${hashHex}${namePart}`]);
+    } else {
+      // 文本字段：带类型标记避免和文件哈希混淆
+      items.push([key, `text:${value}`]);
+    }
+  }
+
+  // 可选排序
+  if (sort) {
+    items.sort((a, b) => {
+      if (a[0] !== b[0]) return a[0].localeCompare(b[0]);
+      return a[1].localeCompare(b[1]);
+    });
+  }
+
+  // 拼接成最终字符串，计算总哈希
+  const finalStr = items.map(([k, v]) => `${k}=${v}`).join('&');
+  const encoder = new TextEncoder();
+  const finalBuffer = await crypto.subtle.digest(algorithm, encoder.encode(finalStr));
+
+  return Array.from(new Uint8Array(finalBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+
+function showToast(msg, type = '') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + type;
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+// ===================== 初始化 =====================
+renderStepper();
+renderPage();
+</script>
+</body>
+</html>
