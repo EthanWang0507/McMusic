@@ -12,12 +12,12 @@
   <!-- 顶部栏 -->
   <div class="topbar">
     <div class="topbar-left">
-      <span class="logo-icon">♪</span>
+      <span class="logo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
       <span class="logo">McMusic</span>
       <span class="subtitle">MIDI → Minecraft 红石音乐</span>
     </div>
     <button class="settings-btn" onclick="openDrawer()">
-      ⚙ 默认设置
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 默认设置
     </button>
   </div>
 
@@ -29,8 +29,8 @@
 
   <!-- 底部导航 -->
   <div class="nav-bar">
-    <button class="btn btn-secondary" id="prevBtn" onclick="prevStep()" style="visibility:hidden">← 上一步</button>
-    <button class="btn btn-primary" id="nextBtn" onclick="nextStep()">下一步 →</button>
+    <button class="btn btn-secondary" id="prevBtn" onclick="prevStep()" style="visibility:hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> 上一步</button>
+    <button class="btn btn-primary" id="nextBtn" onclick="nextStep()">下一步 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
   </div>
 </div>
 
@@ -38,8 +38,8 @@
 <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
 <div class="drawer" id="drawer">
   <div class="drawer-header">
-    <span class="drawer-title">⚙ 默认设置</span>
-    <button class="drawer-close" onclick="closeDrawer()">×</button>
+    <span class="drawer-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 默认设置</span>
+    <button class="drawer-close" onclick="closeDrawer()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
   </div>
   <div class="drawer-body" id="drawerBody"></div>
   <div class="drawer-footer">
@@ -82,6 +82,27 @@ function loadConfig() {
   } catch(e) {}
 }
 loadConfig();
+
+// ===================== SVG 图标库 =====================
+const ICONS = {
+  music: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
+  fileMusic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><circle cx="11" cy="16" r="1.5"/><path d="M12.5 13.5v-3l3-1"/></svg>',
+  cube: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+  monitor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+  fileText: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+  lightbulb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>',
+  clipboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>',
+  checkCircle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  trophy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  alertCircle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  arrowRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
+  arrowLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+};
+function icon(name) { return ICONS[name] || ''; }
 
 // ===================== 步骤指示器 =====================
 function renderStepper() {
@@ -135,19 +156,29 @@ function renderPage(direction) {
   const animDuration = direction ? 500 : 350;
 
   if (oldCard) {
-    // 先添加新卡片以获取其高度，固定容器为两者中较大值，防止跳动/裁剪
-    content.appendChild(card);
+    // 固定容器高度为旧卡片高度，然后平滑过渡到新卡片高度
     const oldHeight = oldCard.offsetHeight;
-    const newHeight = card.offsetHeight;
-    content.style.minHeight = Math.max(oldHeight, newHeight) + 'px';
+    content.style.height = oldHeight + 'px';
+    content.style.transition = 'none';
 
+    content.appendChild(card);
+    const newHeight = card.offsetHeight;
+
+    // 强制重排后启动高度过渡
+    content.offsetHeight;
+    content.style.transition = 'height ' + (animDuration / 1000) + 's cubic-bezier(0.4, 0, 0.2, 1)';
+    content.style.height = newHeight + 'px';
+
+    // 清除旧卡片可能残留的进入动画类，防止与退出动画冲突
+    oldCard.classList.remove('page-enter', 'page-enter-forward', 'page-enter-backward');
     oldCard.classList.add(exitClass);
     card.classList.add(enterClass);
 
     _animTimer = setTimeout(() => {
       oldCard.remove();
       card.classList.remove(enterClass);
-      content.style.minHeight = '';
+      content.style.transition = '';
+      content.style.height = '';
       _animTimer = null;
     }, animDuration);
   } else {
@@ -168,16 +199,16 @@ function updateNavButtons() {
   prev.style.visibility = state.step === 0 ? 'hidden' : 'visible';
 
   if (state.step === STEPS.length - 1) {
-    next.textContent = '完成';
+    next.innerHTML = '完成';
     next.disabled = false;
   } else if (state.step === 3) {
-    next.textContent = '开始放置 →';
+    next.innerHTML = '开始放置 ' + icon('arrowRight');
     next.disabled = !state.checks.every(c => c.status !== 'pending');
   } else if (state.step === 0) {
-    next.textContent = '下一步 →';
+    next.innerHTML = '下一步 ' + icon('arrowRight');
     next.disabled = !state.file;
   } else {
-    next.textContent = '下一步 →';
+    next.innerHTML = '下一步 ' + icon('arrowRight');
     next.disabled = false;
   }
 }
@@ -193,14 +224,14 @@ function renderStep1() {
     <div id="uploadArea">
       ${state.file ? `
         <div class="file-info">
-          <span class="file-icon">🎵</span>
+          <span class="file-icon">${icon("fileMusic")}</span>
           <span class="file-name">${state.file.name}</span>
           <span class="file-size">${formatSize(state.file.size)}</span>
-          <button class="file-remove" onclick="removeFile()">×</button>
+          <button class="file-remove" onclick="removeFile()">${icon("x")}</button>
         </div>
       ` : `
         <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-          <div class="upload-icon">📂</div>
+          <div class="upload-icon">${icon("upload")}</div>
           <div class="upload-text">点击或拖拽 MIDI 文件到此处</div>
           <div class="upload-hint">支持 .mid / .midi 格式</div>
         </div>
@@ -283,16 +314,16 @@ function updateUploadArea() {
   if (state.file) {
     area.innerHTML = `
       <div class="file-info">
-        <span class="file-icon">🎵</span>
+        <span class="file-icon">${icon("fileMusic")}</span>
         <span class="file-name">${state.file.name}</span>
         <span class="file-size">${formatSize(state.file.size)}</span>
-        <button class="file-remove" onclick="removeFile()">×</button>
+        <button class="file-remove" onclick="removeFile()">${icon("x")}</button>
       </div>
     `;
   } else {
     area.innerHTML = `
       <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-        <div class="upload-icon">📂</div>
+        <div class="upload-icon">${icon("upload")}</div>
         <div class="upload-text">点击或拖拽 MIDI 文件到此处</div>
         <div class="upload-hint">支持 .mid / .midi 格式</div>
       </div>
@@ -321,13 +352,13 @@ function renderStep2() {
 
     <div class="info-cards">
       <div class="info-card">
-        <div class="info-card-title midi">🎵 MIDI 信息</div>
+        <div class="info-card-title midi">${icon("music")} MIDI 信息</div>
         <div class="info-row"><span class="info-row-label">音乐时长</span><span class="info-row-value">${r.duration} 秒</span></div>
         <div class="info-row"><span class="info-row-label">轨道数</span><span class="info-row-value">${r.tracks}</span></div>
         <div class="info-row"><span class="info-row-label">PPQN</span><span class="info-row-value">${r.ppqn}</span></div>
       </div>
       <div class="info-card">
-        <div class="info-card-title block">🧱 方块统计</div>
+        <div class="info-card-title block">${icon("cube")} 方块统计</div>
         <div class="info-row"><span class="info-row-label">方块数量</span><span class="info-row-value">${r.block_count}</span></div>
         <div class="info-row"><span class="info-row-label">起始坐标</span><span class="info-row-value">(${r.start_x}, ${r.start_y}, ${r.start_z})</span></div>
         <div class="info-row"><span class="info-row-label">终点坐标</span><span class="info-row-value">(${r.end_x}, ${r.end_y}, ${r.end_z})</span></div>
@@ -337,11 +368,11 @@ function renderStep2() {
     <div class="form-label" style="margin-bottom:10px">选择放置模式</div>
     <div class="mode-cards">
       <div class="mode-card ${state.placeMode === 'rcon' ? 'selected' : ''}" onclick="selectMode('rcon')">
-        <div class="mode-card-title">🖥 RCON 在线放置</div>
+        <div class="mode-card-title">${icon("monitor")} RCON 在线放置</div>
         <div class="mode-card-desc">直接连接 Minecraft 服务器，在线实时放置方块</div>
       </div>
       <div class="mode-card ${state.placeMode === 'mcfunction' ? 'selected' : ''}" onclick="selectMode('mcfunction')">
-        <div class="mode-card-title">📄 mcfunction 导出</div>
+        <div class="mode-card-title">${icon("fileText")} mcfunction 导出</div>
         <div class="mode-card-desc">导出为 .mcfunction 文件，手动在游戏中执行</div>
       </div>
     </div>
@@ -351,6 +382,12 @@ function renderStep2() {
 async function initStep2() {
   if (state.midiIsParsed) return ;
 
+  // 如果尚未预计算哈希（例如直接从其他路径进入），先计算
+  if (!state.parseHash) {
+    await prepareParse();
+  }
+  if (state.midiIsParsed) return;
+
   const c = state.config;
   const formData = new FormData();
   formData.append("file", state.file);
@@ -359,15 +396,6 @@ async function initStep2() {
   formData.append("sy", c.sy);
   formData.append("sz", c.sz);
   formData.append("track_gap", c.track_gap);
-
-  state.parseHash = await hashFormData(formData);
-
-  if (state.parseResultMap.size > 0 && state.parseResultMap.has(state.parseHash)) {
-    state.midiIsParsed = true;
-    console.log('使用缓存Midi解析结果');
-    if (state.step === 1) renderPage();
-    return ;
-  }
 
   fetch("/api/parse", {
     method: "POST",
@@ -401,6 +429,25 @@ async function initStep2() {
     .catch(error => {
       showToast(error.message, 'error');
     });
+}
+
+// 构建 FormData 并计算哈希、检查缓存（在进入步骤2前调用，避免 loading 闪烁）
+async function prepareParse() {
+  const c = state.config;
+  const formData = new FormData();
+  formData.append("file", state.file);
+  formData.append("tps", c.tps);
+  formData.append("sx", c.sx);
+  formData.append("sy", c.sy);
+  formData.append("sz", c.sz);
+  formData.append("track_gap", c.track_gap);
+
+  state.parseHash = await hashFormData(formData);
+
+  if (state.parseResultMap.has(state.parseHash)) {
+    state.midiIsParsed = true;
+    console.log('使用缓存Midi解析结果');
+  }
 }
 
 function selectMode(mode) {
@@ -443,9 +490,7 @@ function renderStep3() {
         <label class="form-label">输出文件名</label>
         <input class="form-input" value="${c.mcfunction_output}" id="inputMcfunctionOutput">
       </div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:8px">
-        💡 文件将保存在项目 data/temp/ 目录下
-      </div>
+      <div class="hint-text">${icon("lightbulb")} 文件将保存在项目 data/temp/ 目录下</div>
     `;
   }
 }
@@ -501,15 +546,15 @@ function renderStep4() {
     <div class="check-list">${checksHTML}</div>
 
     <div class="summary-card">
-      <div class="summary-title">📋 放置摘要</div>
+      <div class="summary-title">${icon("clipboard")} 放置摘要</div>
       <div class="summary-row"><span class="summary-label">文件</span><span class="summary-value">${state.file ? state.file.name : '--'}</span></div>
       <div class="summary-row"><span class="summary-label">模式</span><span class="summary-value">${state.placeMode === 'rcon' ? 'RCON 在线放置' : 'mcfunction 导出'}</span></div>
-      <div class="summary-row"><span class="summary-label">音乐时长</span><span class="summary-value">${r.duration || '--'}</span></div>
+      <div class="summary-row"><span class="summary-label">音乐时长</span><span class="summary-value">${r.duration}</span></div>
       <div class="summary-row"><span class="summary-label">TPS</span><span class="summary-value">${state.config.tps}</span></div>
-      <div class="summary-row"><span class="summary-label">方块数量</span><span class="summary-value">${r.block_count || '--'}</span></div>
-      <div class="summary-row"><span class="summary-label">轨道数</span><span class="summary-value">${r.tracks || '--'}</span></div>
-      <div class="summary-row"><span class="summary-label">起始坐标</span><span class="summary-value">(${r.start_x || '--'}, ${r.start_y || '--'}, ${r.start_z || '--'})</span></div>
-      <div class="summary-row"><span class="summary-label">终止坐标</span><span class="summary-value">(${r.end_x || '--'}, ${r.end_y || '--'}, ${r.end_z || '--'})</span></div>
+      <div class="summary-row"><span class="summary-label">方块数量</span><span class="summary-value">${r.block_count}</span></div>
+      <div class="summary-row"><span class="summary-label">轨道数</span><span class="summary-value">${r.tracks}</span></div>
+      <div class="summary-row"><span class="summary-label">起始坐标</span><span class="summary-value">(${r.start_x}, ${r.start_y}, ${r.start_z})</span></div>
+      <div class="summary-row"><span class="summary-label">终止坐标</span><span class="summary-value">(${r.end_x}, ${r.end_y}, ${r.end_z})</span></div>
     </div>
 
     <div class="switch-row">
@@ -618,13 +663,13 @@ function startPlacement() {
 
 function finishPlacement(total) {
   addLog('success', `所有方块放置完成！共 ${total} 个`);
-  document.getElementById('step5Subtitle').textContent = '✅ 放置完成！';
+  document.getElementById('step5Subtitle').innerHTML = `${icon('checkCircle')} 放置完成！`;
   document.getElementById('step5Subtitle').style.color = 'var(--success)';
 
   const elapsed = (Math.random() * 30 + 10).toFixed(1);
   document.getElementById('resultArea').innerHTML = `
     <div class="result-card">
-      <div class="result-title">🎉 放置成功</div>
+      <div class="result-title">${icon("trophy")} 放置成功</div>
       <div class="result-text">
         成功放置 ${total} 个方块<br>
         耗时：${elapsed} 秒<br>
@@ -647,7 +692,7 @@ function addLog(type, msg) {
 }
 
 // ===================== 导航 =====================
-function nextStep() {
+async function nextStep() {
   if (state.step === STEPS.length - 1) {
     // 完成，重置
     state.step = 0;
@@ -674,6 +719,11 @@ function nextStep() {
   state.step++;
   renderStepper();
 
+  // 进入步骤2前预计算哈希并检查缓存，避免 loading 状态闪烁
+  if (state.step === 1) {
+    await prepareParse();
+  }
+
   // 进入检查步骤前先初始化检查项，避免渲染后再次重渲染
   if (state.step === 3) {
     state.checks = [
@@ -686,6 +736,7 @@ function nextStep() {
 
   renderPage('forward');
 
+  if (state.step === 1) initStep2();
   if (state.step === 3) runChecks();
 }
 
@@ -756,10 +807,10 @@ function renderDrawer() {
       <div class="settings-section-title">放置模式</div>
       <div class="mode-cards" style="grid-template-columns:1fr">
         <div class="mode-card ${c.place_mode === 'rcon' ? 'selected' : ''}" onclick="setDefaultMode('rcon')" style="padding:12px">
-          <div class="mode-card-title" style="font-size:13px">🖥 RCON 在线放置</div>
+          <div class="mode-card-title" style="font-size:13px">${icon("monitor")} RCON 在线放置</div>
         </div>
         <div class="mode-card ${c.place_mode === 'mcfunction' ? 'selected' : ''}" onclick="setDefaultMode('mcfunction')" style="padding:12px">
-          <div class="mode-card-title" style="font-size:13px">📄 mcfunction 导出</div>
+          <div class="mode-card-title" style="font-size:13px">${icon("fileText")} mcfunction 导出</div>
         </div>
       </div>
       <div class="switch-row">
@@ -889,12 +940,39 @@ async function hashFormData(formData, options = {}) {
 }
 
 
+let _toastTimer = null;
+
 function showToast(msg, type = '') {
   const toast = document.getElementById('toast');
-  toast.textContent = msg;
+  if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+
+  const isError = type === 'error';
+  const isSuccess = type === 'success';
+  const toastIcon = isError ? icon('alertCircle') : isSuccess ? icon('checkCircle') : '';
+
+  toast.innerHTML = `
+    ${toastIcon ? `<span class="toast-icon">${toastIcon}</span>` : ''}
+    <span class="toast-msg">${msg}</span>
+    ${isError ? `<button class="toast-close" onclick="hideToast()">${icon('x')}</button>` : ''}
+  `;
   toast.className = 'toast ' + type;
-  setTimeout(() => toast.classList.add('show'), 10);
-  setTimeout(() => toast.classList.remove('show'), 2500);
+
+  // 点击 toast 本身也可关闭（错误类型）
+  toast.style.pointerEvents = isError ? 'auto' : 'none';
+  toast.onclick = isError ? (e) => { if (e.target === toast || e.target.classList.contains('toast-msg')) hideToast(); } : null;
+
+  requestAnimationFrame(() => toast.classList.add('show'));
+
+  // 错误类型不自动消失，其他类型 2.5 秒后消失
+  if (!isError) {
+    _toastTimer = setTimeout(() => hideToast(), 2500);
+  }
+}
+
+function hideToast() {
+  const toast = document.getElementById('toast');
+  if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+  toast.classList.remove('show');
 }
 
 // ===================== 初始化 =====================
