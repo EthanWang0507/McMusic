@@ -1,0 +1,73 @@
+<style lang="scss" scoped>
+.animate-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.animate-card-42 {
+  overflow: visible;
+
+  .animate-card {
+    &__layer {
+      width: 100%;
+      height: 100%;
+
+      & > img {
+        width: 100%;
+        height: 100%;
+        transition: 0.5s;
+      }
+    }
+
+    &__sublayer {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      padding: 45px 100px 20px 20px;
+      transform: translateX(-100%);
+
+      text-align: center;
+      background-color: #fff;
+      color: #000;
+      opacity: 0;
+      transition: 0.5s;
+      pointer-events: none;
+    }
+  }
+
+  &:hover {
+    .animate-card {
+      &__layer > img {
+        position: relative;
+        transform: scale(0.5) translateX(100%);
+        border: 6px solid rgba(255, 255, 255, 0.9);
+        z-index: 9;
+      }
+
+      &__sublayer {
+        transform: translateX(0px);
+        opacity: 1
+      }
+    }
+  }
+}
+
+</style>
+<div class="animate-card animate-card-42">
+    <div class="animate-card__layer">
+        <img src="/images/animate-card/card_bg.png"/>
+    </div>
+
+    <div class="animate-card__sublayer">
+        <h3>
+            标题
+        </h3>
+        <div>
+            我是一段非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常长的描述
+        </div>
+    </div>
+</div>
