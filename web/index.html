@@ -104,15 +104,15 @@ function renderStepper() {
 // ===================== 页面渲染 =====================
 let _animTimer = null;
 
-function renderPage() {
+function renderPage(direction) {
   const content = document.getElementById('content');
 
   // 立即清理所有正在退出的残留卡片，防止堆叠
-  content.querySelectorAll('.content-card.page-exit').forEach(c => c.remove());
+  content.querySelectorAll('.content-card.page-exit, .content-card.page-exit-forward, .content-card.page-exit-backward').forEach(c => c.remove());
   if (_animTimer) { clearTimeout(_animTimer); _animTimer = null; }
 
   // 找到当前活动卡片（排除正在退出的）
-  const oldCard = content.querySelector('.content-card:not(.page-exit)');
+  const oldCard = content.querySelector('.content-card:not(.page-exit):not(.page-exit-forward):not(.page-exit-backward)');
 
   const card = document.createElement('div');
   card.className = 'content-card';
@@ -125,21 +125,31 @@ function renderPage() {
     case 4: card.innerHTML = renderStep5(); break;
   }
 
-  if (oldCard) {
-    // 固定容器高度，防止新旧卡片高度不同导致跳动
-    const oldHeight = oldCard.offsetHeight;
-    content.style.minHeight = oldHeight + 'px';
+  // 根据方向选择动画类
+  const exitClass = direction === 'forward' ? 'page-exit-forward'
+                   : direction === 'backward' ? 'page-exit-backward'
+                   : 'page-exit';
+  const enterClass = direction === 'forward' ? 'page-enter-forward'
+                   : direction === 'backward' ? 'page-enter-backward'
+                   : 'page-enter';
+  const animDuration = direction ? 500 : 350;
 
-    oldCard.classList.add('page-exit');
+  if (oldCard) {
+    // 先添加新卡片以获取其高度，固定容器为两者中较大值，防止跳动/裁剪
     content.appendChild(card);
-    card.classList.add('page-enter');
+    const oldHeight = oldCard.offsetHeight;
+    const newHeight = card.offsetHeight;
+    content.style.minHeight = Math.max(oldHeight, newHeight) + 'px';
+
+    oldCard.classList.add(exitClass);
+    card.classList.add(enterClass);
 
     _animTimer = setTimeout(() => {
       oldCard.remove();
-      card.classList.remove('page-enter');
+      card.classList.remove(enterClass);
       content.style.minHeight = '';
       _animTimer = null;
-    }, 500);
+    }, animDuration);
   } else {
     content.appendChild(card);
   }
@@ -541,14 +551,6 @@ function updateCheckItem(index, status, detail) {
 }
 
 function runChecks() {
-  state.checks = [
-    { name: 'MIDI 文件解析', status: 'pending', detail: '' },
-    { name: '方块序列生成', status: 'pending', detail: '' },
-    { name: 'RCON 服务器连接', status: 'pending', detail: '' },
-    { name: '放置区域可用性', status: 'pending', detail: '' }
-  ];
-  renderPage();
-
   state.checks.forEach((check, i) => {
     setTimeout(() => {
       if (i === 2 && state.placeMode === 'mcfunction') {
@@ -671,7 +673,18 @@ function nextStep() {
 
   state.step++;
   renderStepper();
-  renderPage();
+
+  // 进入检查步骤前先初始化检查项，避免渲染后再次重渲染
+  if (state.step === 3) {
+    state.checks = [
+      { name: 'MIDI 文件解析', status: 'pending', detail: '' },
+      { name: '方块序列生成', status: 'pending', detail: '' },
+      { name: 'RCON 服务器连接', status: 'pending', detail: '' },
+      { name: '放置区域可用性', status: 'pending', detail: '' }
+    ];
+  }
+
+  renderPage('forward');
 
   if (state.step === 3) runChecks();
 }
@@ -681,7 +694,7 @@ function prevStep() {
     collectInputs();
     state.step--;
     renderStepper();
-    renderPage();
+    renderPage('backward');
   }
 }
 
