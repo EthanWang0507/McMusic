@@ -418,6 +418,16 @@
     line-height: 1.5;
   }
 
+  .config-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0 20px;
+  }
+  .mode-config-area {
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+
+
   /* ===== 开关 ===== */
   .switch-row {
     display: flex;
@@ -604,9 +614,11 @@
     font-weight: 600;
     color: var(--success);
     margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   .result-card.error .result-title { color: var(--error); }
-  .result-title { display: flex; align-items: center; gap: 8px; }
   .result-title svg { width: 18px; height: 18px; }
   .result-text {
     font-size: 13px;

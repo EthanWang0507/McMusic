@@ -42,10 +42,10 @@ class MakeBlock:
         self.sy = sy
         self.sz = sz
         self.track_gap = track_gap
-        self.blocks = []  # 存储所有待放置的方块
+        self._blocks = []  # 存储所有待放置的方块
 
     def _add_block(self, block: BlockEntry):
-        self.blocks.append(block)
+        self._blocks.append(block)
 
     def _add_one_delay(self, x: int, y: int, z: int):
         self._add_block(BlockEntry(BlockType.STICKY_PISTON, x, y, z, state={"facing": {"content": "south", "type": "normal"}}))
@@ -55,7 +55,12 @@ class MakeBlock:
     def get_track_len(self) -> int:
         return self.__track_len
 
-    def build(self, all_notes_info) -> list[BlockEntry]:
+    def get_blocks(self) -> list[BlockEntry]:
+        if not self._blocks:  # 如果没有方块，则返回空列表
+            raise ValueError("没有可放置的方块")
+        return self._blocks
+
+    def build(self, all_notes_info) -> bool:
         def make_track_trigger():
             """用于在轨道前放置红石原件以激活轨道"""
             for i in range(track_num):  # 在轨道z=-1位置放置红石线
@@ -75,7 +80,7 @@ class MakeBlock:
                 }
             }))
             self._add_block(BlockEntry(BlockType.LEVER, track_x[0] - 3, self.sy, self.sz - 3))
-        self.blocks.clear()
+        self._blocks.clear()
 
         track_num = all_notes_info['track_num']
         all_notes = all_notes_info['all_notes']
@@ -172,7 +177,7 @@ class MakeBlock:
             n += 1
         self.__track_len = offset_z
 
-        return self.blocks
+        return True
 
 
 if __name__ == "__main__":

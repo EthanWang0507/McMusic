@@ -7,10 +7,15 @@ from services.block_placer.base import BlockPlacer
 
 
 class RconBlockPlacer(BlockPlacer):
-    def __init__(self, host: str, port: int, pwd: str) -> None:
-        self.host = host
-        self.port = port
-        self.pwd = pwd
+    def _validate_config(self) -> None:
+        if not self.config['host'] or not self.config['port'] or not self.config['pwd']:
+            raise ValueError("RCON 配置不完整")
+
+    def _init_resource(self) -> None:
+        c = self.config
+        self.host = c['host']
+        self.port = c['port']
+        self.pwd = c['pwd']
 
         self.__track_len = 0
         self._mcr = None
@@ -222,3 +227,14 @@ class RconBlockPlacer(BlockPlacer):
         if self._mcr:
             self._mcr.disconnect()
         LOGGER.info("连接断开")
+
+
+def create_placer(place_mode: str, config: dict) -> BlockPlacer:
+    """放置器工厂：根据模式创建对应的放置实例，新增模式只需扩展分支"""
+    if place_mode == "rcon":
+        return RconBlockPlacer(config)
+    # 后续新增 mcfunction 模式，在这里加分支即可
+    # elif place_mode == "mcfunction":
+    #     return McFunctionPlacer(output_path=MCF_OUTPUT_PATH)
+    else:
+        raise ValueError(f"不支持的放置模式: {place_mode}")

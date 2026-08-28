@@ -6,6 +6,22 @@ from utils.constants import BlockEntry
 class BlockPlacer(ABC):
     """放置方块的抽象类"""
 
+    def __init__(self, config: dict) -> None:
+        """构造方法"""
+        self.config = config
+
+        self._validate_config()
+        self._init_resource()
+
+    @abstractmethod
+    def _validate_config(self) -> None:
+        """校验配置合法性"""
+
+    @abstractmethod
+    def _init_resource(self) -> None:
+        """初始化依赖资源"""
+        pass
+
     def setup(self) -> None:
         """初始化的方法"""
         pass
@@ -26,3 +42,4 @@ class BlockPlacer(ABC):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.teardown()
         return False
+    

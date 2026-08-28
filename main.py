@@ -11,7 +11,8 @@ from config.config import (
     DEFAULT_TPS, DEFAULT_TRACK_GAP,
     DEFAULT_PLACE_MODE, DEFAULT_AUTO_CONFIRM
 )
-from services.block_placer.rcon_placer import RconBlockPlacer
+from services.block_placer.base import BlockPlacer
+from services.block_placer.placer import RconBlockPlacer
 from services.parse_midi import parse_midi
 from services.transform_block import transform_block
 from services.make_block import MakeBlock
@@ -60,14 +61,10 @@ def build_config(args: argparse.Namespace) -> AppConfig:
     )
 
 
-def create_placer(place_mode: str):
+def create_placer(place_mode: str, config: dict) -> BlockPlacer:
     """放置器工厂：根据模式创建对应的放置实例，新增模式只需扩展分支"""
     if place_mode == "rcon":
-        return RconBlockPlacer(
-            host=SERVER_IP,
-            port=RCON_PORT,
-            pwd=RCON_PWD,
-        )
+        return RconBlockPlacer(config)
     # 后续新增 mcfunction 模式，在这里加分支即可
     # elif place_mode == "mcfunction":
     #     return McFunctionPlacer(output_path=MCF_OUTPUT_PATH)
@@ -107,7 +104,8 @@ if __name__ == "__main__":
     LOGGER.info("转换完成")
 
     maker = MakeBlock(config.sx, config.sy, config.sz, track_gap=config.track_gap)
-    blocks = maker.build(block_data)
+    maker.build(block_data)
+    blocks = maker.get_blocks()
     track_len = maker.get_track_len()
 
     ex = config.sx + (midi_info['num_tracks'] - 1) * (config.track_gap + 1)
@@ -121,7 +119,11 @@ if __name__ == "__main__":
                 f"终点坐标: ({ex}, {config.sy}, {ez})")
     LOGGER.info("===============END==============")
 
-    placer = create_placer(config.place_mode)
+    placer = create_placer(config.place_mode, {
+        'host': SERVER_IP,
+        'port': RCON_PORT,
+        'pwd': RCON_PWD
+    })
 
     if not user_confirm("确认开始放置？(Y/n): ", config.auto_confirm):
         LOGGER.info("已取消放置。")

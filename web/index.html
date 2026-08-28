@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>McMusic - MIDI 红石音乐生成器</title>
-<link rel="stylesheet" href="/css/index.css"></link>
+<link rel="stylesheet" href="/css/index.css">
 </head>
 <body>
 
@@ -80,6 +80,8 @@ function loadConfig() {
     const saved = localStorage.getItem('mcmusic_defaults');
     if (saved) state.config = { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
   } catch(e) {}
+  // 同步当前会话的放置模式
+  state.placeMode = state.config.place_mode || 'rcon';
 }
 loadConfig();
 
@@ -101,6 +103,7 @@ const ICONS = {
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
   arrowRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
   arrowLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+  refreshCw: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
 };
 function icon(name) { return ICONS[name] || ''; }
 
@@ -207,6 +210,9 @@ function updateNavButtons() {
   } else if (state.step === 0) {
     next.innerHTML = '下一步 ' + icon('arrowRight');
     next.disabled = !state.file;
+  } else if (state.step === 1){
+    next.innerHTML = '下一步 ' + icon('arrowRight');
+    next.disabled = !state.midiIsParsed;
   } else {
     next.innerHTML = '下一步 ' + icon('arrowRight');
     next.disabled = false;
@@ -215,7 +221,6 @@ function updateNavButtons() {
 
 // ===================== 步骤1：文件选择 =====================
 function renderStep1() {
-  state.midiIsParsed = false;
   const c = state.config;
   return `
     <div class="page-title">选择 MIDI 文件与基础参数</div>
@@ -337,7 +342,7 @@ function updateUploadArea() {
 function renderStep2() {
   if (!state.midiIsParsed) {
     return `
-      <div class="page-title">解析预览与模式选择</div>
+      <div class="page-title">解析预览</div>
       <div class="page-desc">正在解析 MIDI 文件，请稍候...</div>
       <div class="loading-state">
         <div class="spinner"></div>
@@ -347,8 +352,8 @@ function renderStep2() {
   }
   const r = state.parseResultMap.get(state.parseHash);
   return `
-    <div class="page-title">解析预览与模式选择</div>
-    <div class="page-desc">查看 MIDI 解析结果和方块统计，选择放置模式</div>
+    <div class="page-title">解析预览</div>
+    <div class="page-desc">查看 MIDI 解析结果和方块统计</div>
 
     <div class="info-cards">
       <div class="info-card">
@@ -364,23 +369,11 @@ function renderStep2() {
         <div class="info-row"><span class="info-row-label">终点坐标</span><span class="info-row-value">(${r.end_x}, ${r.end_y}, ${r.end_z})</span></div>
       </div>
     </div>
-
-    <div class="form-label" style="margin-bottom:10px">选择放置模式</div>
-    <div class="mode-cards">
-      <div class="mode-card ${state.placeMode === 'rcon' ? 'selected' : ''}" onclick="selectMode('rcon')">
-        <div class="mode-card-title">${icon("monitor")} RCON 在线放置</div>
-        <div class="mode-card-desc">直接连接 Minecraft 服务器，在线实时放置方块</div>
-      </div>
-      <div class="mode-card ${state.placeMode === 'mcfunction' ? 'selected' : ''}" onclick="selectMode('mcfunction')">
-        <div class="mode-card-title">${icon("fileText")} mcfunction 导出</div>
-        <div class="mode-card-desc">导出为 .mcfunction 文件，手动在游戏中执行</div>
-      </div>
-    </div>
   `;
 }
 
 async function initStep2() {
-  if (state.midiIsParsed) return ;
+  if (state.midiIsParsed) return;
 
   // 如果尚未预计算哈希（例如直接从其他路径进入），先计算
   if (!state.parseHash) {
@@ -388,6 +381,10 @@ async function initStep2() {
   }
   if (state.midiIsParsed) return;
 
+  doParse();
+}
+
+function doParse() {
   const c = state.config;
   const formData = new FormData();
   formData.append("file", state.file);
@@ -405,8 +402,7 @@ async function initStep2() {
       if (response.ok) {
         return response.json();
       } else {
-          showToast('Midi文件解析失败, 请重试。', 'error');
-        throw new Error("请求失败");
+        throw new Error("服务器返回错误 (" + response.status + ")");
       }
     })
     .then(data => {
@@ -427,12 +423,33 @@ async function initStep2() {
       if (state.step === 1) renderPage();
     })
     .catch(error => {
-      showToast(error.message, 'error');
+      showToast('MIDI 解析失败：' + error.message, 'error');
+      // 在卡片内显示错误状态和重试按钮
+      if (state.step === 1) {
+        const card = document.querySelector('#content .content-card');
+        if (card) {
+          card.innerHTML = `
+            <div class="page-title">解析预览</div>
+            <div class="page-desc">解析 MIDI 文件并预览生成结果</div>
+            <div class="loading-state" style="padding:30px 20px">
+              <div style="color:var(--error);margin-bottom:12px;display:flex">${icon('alertCircle')}</div>
+              <div class="loading-text" style="color:var(--error);margin-bottom:16px">解析失败：${error.message}</div>
+              <button class="btn btn-primary" onclick="retryParse()">${icon('refreshCw')} 重试</button>
+            </div>
+          `;
+        }
+      }
     });
+}
+
+function retryParse() {
+  // renderPage 会自动调用 initStep2 → doParse
+  if (state.step === 1) renderPage();
 }
 
 // 构建 FormData 并计算哈希、检查缓存（在进入步骤2前调用，避免 loading 闪烁）
 async function prepareParse() {
+  if (!state.file) { state.midiIsParsed = false; return; }
   const c = state.config;
   const formData = new FormData();
   formData.append("file", state.file);
@@ -444,29 +461,64 @@ async function prepareParse() {
 
   state.parseHash = await hashFormData(formData);
 
-  if (state.parseResultMap.has(state.parseHash)) {
-    state.midiIsParsed = true;
-    console.log('使用缓存Midi解析结果');
-  }
+  // 无论是否命中缓存都显式设置，避免上一轮的 true 残留导致跳过新解析
+  state.midiIsParsed = state.parseResultMap.has(state.parseHash);
+  if (state.midiIsParsed) console.log('使用缓存Midi解析结果');
 }
 
 function selectMode(mode) {
+  if (state.placeMode === mode) return;
   state.placeMode = mode;
   state.config.place_mode = mode;
-  // 仅更新模式卡片选中状态，不触发整页动画
-  document.querySelectorAll('.mode-card').forEach(card => {
+
+  // 更新模式卡片选中状态（仅内容区内，不影响设置抽屉）
+  document.querySelectorAll('#content .mode-card').forEach(card => {
     const isTarget = card.getAttribute('onclick') === `selectMode('${mode}')`;
     card.classList.toggle('selected', isTarget);
   });
+
+  // 局部切换配置区，带淡入动画 + 高度平滑过渡
+  const configEl = document.getElementById('modeConfigArea');
+  const contentEl = document.getElementById('content');
+  if (configEl) {
+    // 取消上一次未完成的切换
+    if (configEl._switchTimer) clearTimeout(configEl._switchTimer);
+
+    const oldHeight = contentEl.offsetHeight;
+    configEl.style.opacity = '0';
+    configEl.style.transform = 'translateY(6px)';
+
+    configEl._switchTimer = setTimeout(() => {
+      configEl._switchTimer = null;
+      configEl.innerHTML = renderModeConfig(mode);
+      // 高度过渡
+      const newHeight = contentEl.offsetHeight;
+      if (oldHeight !== newHeight) {
+        contentEl.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        contentEl.style.height = oldHeight + 'px';
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            contentEl.style.height = newHeight + 'px';
+          });
+        });
+        const onEnd = () => {
+          contentEl.removeEventListener('transitionend', onEnd);
+          contentEl.style.height = '';
+          contentEl.style.transition = '';
+        };
+        contentEl.addEventListener('transitionend', onEnd);
+      }
+      configEl.style.opacity = '1';
+      configEl.style.transform = 'translateY(0)';
+    }, 150);
+  }
 }
 
 // ===================== 步骤3：模式配置 =====================
-function renderStep3() {
+function renderModeConfig(mode) {
   const c = state.config;
-  if (state.placeMode === 'rcon') {
+  if (mode === 'rcon') {
     return `
-      <div class="page-title">RCON 连接配置</div>
-      <div class="page-desc">配置 Minecraft 服务器的 RCON 连接参数</div>
       <div class="form-group">
         <label class="form-label">服务器地址</label>
         <input class="form-input" value="${c.rcon_host}" id="inputRconHost">
@@ -484,8 +536,6 @@ function renderStep3() {
     `;
   } else {
     return `
-      <div class="page-title">mcfunction 导出配置</div>
-      <div class="page-desc">配置导出文件的参数</div>
       <div class="form-group">
         <label class="form-label">输出文件名</label>
         <input class="form-input" value="${c.mcfunction_output}" id="inputMcfunctionOutput">
@@ -493,6 +543,31 @@ function renderStep3() {
       <div class="hint-text">${icon("lightbulb")} 文件将保存在项目 data/temp/ 目录下</div>
     `;
   }
+}
+
+function renderStep3() {
+  return `
+    <div class="page-title">模式选择与配置</div>
+    <div class="page-desc">选择放置模式并配置相关参数</div>
+
+    <div class="form-label" style="margin-bottom:10px">选择放置模式</div>
+    <div class="mode-cards">
+      <div class="mode-card ${state.placeMode === 'rcon' ? 'selected' : ''}" onclick="selectMode('rcon')">
+        <div class="mode-card-title">${icon("monitor")} RCON 在线放置</div>
+        <div class="mode-card-desc">直接连接 Minecraft 服务器，在线实时放置方块</div>
+      </div>
+      <div class="mode-card ${state.placeMode === 'mcfunction' ? 'selected' : ''}" onclick="selectMode('mcfunction')">
+        <div class="mode-card-title">${icon("fileText")} mcfunction 导出</div>
+        <div class="mode-card-desc">导出为 .mcfunction 文件，手动在游戏中执行</div>
+      </div>
+    </div>
+
+    <div class="config-divider"></div>
+
+    <div id="modeConfigArea" class="mode-config-area">
+      ${renderModeConfig(state.placeMode)}
+    </div>
+  `;
 }
 
 function toggleSwitch(key) {
@@ -549,12 +624,12 @@ function renderStep4() {
       <div class="summary-title">${icon("clipboard")} 放置摘要</div>
       <div class="summary-row"><span class="summary-label">文件</span><span class="summary-value">${state.file ? state.file.name : '--'}</span></div>
       <div class="summary-row"><span class="summary-label">模式</span><span class="summary-value">${state.placeMode === 'rcon' ? 'RCON 在线放置' : 'mcfunction 导出'}</span></div>
-      <div class="summary-row"><span class="summary-label">音乐时长</span><span class="summary-value">${r.duration}</span></div>
+      <div class="summary-row"><span class="summary-label">音乐时长</span><span class="summary-value">${r.duration ?? '--'}</span></div>
       <div class="summary-row"><span class="summary-label">TPS</span><span class="summary-value">${state.config.tps}</span></div>
-      <div class="summary-row"><span class="summary-label">方块数量</span><span class="summary-value">${r.block_count}</span></div>
-      <div class="summary-row"><span class="summary-label">轨道数</span><span class="summary-value">${r.tracks}</span></div>
-      <div class="summary-row"><span class="summary-label">起始坐标</span><span class="summary-value">(${r.start_x}, ${r.start_y}, ${r.start_z})</span></div>
-      <div class="summary-row"><span class="summary-label">终止坐标</span><span class="summary-value">(${r.end_x}, ${r.end_y}, ${r.end_z})</span></div>
+      <div class="summary-row"><span class="summary-label">方块数量</span><span class="summary-value">${r.block_count ?? '--'}</span></div>
+      <div class="summary-row"><span class="summary-label">轨道数</span><span class="summary-value">${r.tracks ?? '--'}</span></div>
+      <div class="summary-row"><span class="summary-label">起始坐标</span><span class="summary-value">(${r.start_x ?? '--'}, ${r.start_y ?? '--'}, ${r.start_z ?? '--'})</span></div>
+      <div class="summary-row"><span class="summary-label">终止坐标</span><span class="summary-value">(${r.end_x ?? '--'}, ${r.end_y ?? '--'}, ${r.end_z ?? '--'})</span></div>
     </div>
 
     <div class="switch-row">
@@ -598,6 +673,8 @@ function updateCheckItem(index, status, detail) {
 function runChecks() {
   state.checks.forEach((check, i) => {
     setTimeout(() => {
+      // 离开步骤4后忽略旧定时器
+      if (state.step !== 3) return;
       if (i === 2 && state.placeMode === 'mcfunction') {
         updateCheckItem(i, 'skip', 'mcfunction 模式无需连接');
       } else {
@@ -626,9 +703,16 @@ function renderStep5() {
 }
 
 function initStep5() {
+  // 防止重复启动放置
+  if (_placementTimers.connection || _placementTimers.interval) return;
   state.progress = 0;
   state.logs = [];
   startPlacement();
+}
+
+function stopPlacement() {
+  if (_placementTimers.connection) { clearTimeout(_placementTimers.connection); _placementTimers.connection = null; }
+  if (_placementTimers.interval) { clearInterval(_placementTimers.interval); _placementTimers.interval = null; }
 }
 
 function startPlacement() {
@@ -636,25 +720,29 @@ function startPlacement() {
   const total = parsed ? parsed.block_count : 1000;
   addLog('info', `连接服务器 ${state.config.rcon_host}:${state.config.rcon_port}...`);
 
-  setTimeout(() => {
+  _placementTimers.connection = setTimeout(() => {
+    _placementTimers.connection = null;
     addLog('success', '连接成功，开始放置方块...');
     addLog('info', `共 ${total} 个方块待放置`);
 
     let placed = 0;
-    const interval = setInterval(() => {
+    _placementTimers.interval = setInterval(() => {
       const batch = Math.floor(Math.random() * 80) + 20;
       placed = Math.min(placed + batch, total);
       state.progress = (placed / total) * 100;
 
-      document.getElementById('progressFill').style.width = state.progress + '%';
-      document.getElementById('progressText').textContent = state.progress.toFixed(1) + '%';
+      const fill = document.getElementById('progressFill');
+      const text = document.getElementById('progressText');
+      if (!fill || !text) { stopPlacement(); return; }
+      fill.style.width = state.progress + '%';
+      text.textContent = state.progress.toFixed(1) + '%';
 
       if (placed % 200 < batch) {
         addLog('info', `已放置 ${placed}/${total} (${state.progress.toFixed(1)}%)`);
       }
 
       if (placed >= total) {
-        clearInterval(interval);
+        stopPlacement();
         finishPlacement(total);
       }
     }, 150);
@@ -692,9 +780,15 @@ function addLog(type, msg) {
 }
 
 // ===================== 导航 =====================
+let _navigating = false;
+const _placementTimers = { connection: null, interval: null };
+
 async function nextStep() {
+  if (_navigating) return;
+
   if (state.step === STEPS.length - 1) {
     // 完成，重置
+    stopPlacement();
     state.step = 0;
     state.file = null;
     state.parseResultMap = new Map();
@@ -703,6 +797,7 @@ async function nextStep() {
     state.checks = [];
     state.progress = 0;
     state.logs = [];
+    state.placeMode = state.config.place_mode || 'rcon';
     renderStepper();
     renderPage();
     return;
@@ -716,33 +811,47 @@ async function nextStep() {
     return;
   }
 
-  state.step++;
-  renderStepper();
+  _navigating = true;
+  try {
+    state.step++;
+    renderStepper();
 
-  // 进入步骤2前预计算哈希并检查缓存，避免 loading 状态闪烁
-  if (state.step === 1) {
-    await prepareParse();
+    // 进入步骤2前预计算哈希并检查缓存，避免 loading 状态闪烁
+    if (state.step === 1) {
+      try {
+        await prepareParse();
+      } catch (e) {
+        // 哈希计算失败，回退到步骤1
+        state.step--;
+        renderStepper();
+        showToast('文件读取失败：' + e.message, 'error');
+        return;
+      }
+    }
+
+    // 进入检查步骤前先初始化检查项，避免渲染后再次重渲染
+    if (state.step === 3) {
+      state.checks = [
+        { name: 'MIDI 文件解析', status: 'pending', detail: '' },
+        { name: '方块序列生成', status: 'pending', detail: '' },
+        { name: 'RCON 服务器连接', status: 'pending', detail: '' },
+        { name: '放置区域可用性', status: 'pending', detail: '' }
+      ];
+    }
+
+    renderPage('forward');
+
+    if (state.step === 3) runChecks();
+  } finally {
+    _navigating = false;
   }
-
-  // 进入检查步骤前先初始化检查项，避免渲染后再次重渲染
-  if (state.step === 3) {
-    state.checks = [
-      { name: 'MIDI 文件解析', status: 'pending', detail: '' },
-      { name: '方块序列生成', status: 'pending', detail: '' },
-      { name: 'RCON 服务器连接', status: 'pending', detail: '' },
-      { name: '放置区域可用性', status: 'pending', detail: '' }
-    ];
-  }
-
-  renderPage('forward');
-
-  if (state.step === 1) initStep2();
-  if (state.step === 3) runChecks();
 }
 
 function prevStep() {
   if (state.step > 0) {
     collectInputs();
+    // 离开步骤5时停止放置定时器
+    if (state.step === 4) stopPlacement();
     state.step--;
     renderStepper();
     renderPage('backward');
@@ -751,16 +860,17 @@ function prevStep() {
 
 function collectInputs() {
   const getVal = (id) => document.getElementById(id)?.value;
+  const num = (v, fallback) => { const n = Number(v); return Number.isFinite(n) ? n : fallback; };
   if (state.step === 0) {
-    state.config.tps = parseFloat(getVal('inputTps')) || 20;
-    state.config.track_gap = parseInt(getVal('inputTrackGap')) || 3;
-    state.config.sx = parseInt(getVal('inputSx')) || 0;
-    state.config.sy = parseInt(getVal('inputSy')) || 0;
-    state.config.sz = parseInt(getVal('inputSz')) || 0;
+    state.config.tps = num(getVal('inputTps'), 20);
+    state.config.track_gap = num(getVal('inputTrackGap'), 3);
+    state.config.sx = num(getVal('inputSx'), 0);
+    state.config.sy = num(getVal('inputSy'), 0);
+    state.config.sz = num(getVal('inputSz'), 0);
   }
   if (state.step === 2 && state.placeMode === 'rcon') {
     state.config.rcon_host = getVal('inputRconHost') || '127.0.0.1';
-    state.config.rcon_port = parseInt(getVal('inputRconPort')) || 25575;
+    state.config.rcon_port = num(getVal('inputRconPort'), 25575);
     state.config.rcon_pwd = getVal('inputRconPwd') || '';
   }
   if (state.step === 2 && state.placeMode === 'mcfunction') {
@@ -861,13 +971,14 @@ function setDefaultSwitch(key) {
 
 function saveDefaults() {
   const getVal = (id) => document.getElementById(id)?.value;
-  state.config.tps = parseFloat(getVal('setTps')) || 20;
-  state.config.track_gap = parseInt(getVal('setTrackGap')) || 3;
-  state.config.sx = parseInt(getVal('setSx')) || 0;
-  state.config.sy = parseInt(getVal('setSy')) || 0;
-  state.config.sz = parseInt(getVal('setSz')) || 0;
+  const num = (v, fallback) => { const n = Number(v); return Number.isFinite(n) ? n : fallback; };
+  state.config.tps = num(getVal('setTps'), 20);
+  state.config.track_gap = num(getVal('setTrackGap'), 3);
+  state.config.sx = num(getVal('setSx'), 0);
+  state.config.sy = num(getVal('setSy'), 0);
+  state.config.sz = num(getVal('setSz'), 0);
   state.config.rcon_host = getVal('setRconHost') || '127.0.0.1';
-  state.config.rcon_port = parseInt(getVal('setRconPort')) || 25575;
+  state.config.rcon_port = num(getVal('setRconPort'), 25575);
   state.config.rcon_pwd = getVal('setRconPwd') || '';
   state.config.mcfunction_output = getVal('setMcfunctionOutput') || 'output.mcfunction';
 
@@ -959,7 +1070,6 @@ function showToast(msg, type = '') {
 
   // 点击 toast 本身也可关闭（错误类型）
   toast.style.pointerEvents = isError ? 'auto' : 'none';
-  toast.onclick = isError ? (e) => { if (e.target === toast || e.target.classList.contains('toast-msg')) hideToast(); } : null;
 
   requestAnimationFrame(() => toast.classList.add('show'));
 

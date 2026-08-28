@@ -1,7 +1,8 @@
+from enum import StrEnum
 from dataclasses import dataclass, field
 
 
-class BlockType:
+class BlockType(StrEnum):
     WIRE = "minecraft:redstone_wire"
     REDSTONE_LAMP = "minecraft:redstone_lamp"
     NOTE_BLOCK = "extendednoteblock:extended_note_block"

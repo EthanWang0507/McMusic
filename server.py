@@ -4,6 +4,7 @@ McMusic Web Server - Flask 后端
 """
 import os
 import json
+from dataclasses import dataclass, field
 import tempfile
 from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory
@@ -12,7 +13,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from services.parse_midi import parse_midi
 from services.transform_block import transform_block
 from services.make_block import MakeBlock
-from services.block_placer.rcon_placer import RconBlockPlacer
+from services.block_placer.placer import create_placer
 
 # ===================== 配置 =====================
 BASE_DIR = Path(__file__).parent
@@ -29,8 +30,25 @@ BUILTIN_DEFAULTS = {
     "rcon_auto_unload": True, "mcfunction_output": "output.mcfunction"
 }
 
-app = Flask(__name__, static_folder=None)
+@dataclass
+class ParseResult:
+    ex: int = 0
+    ey: int = 0
+    ez: int = 0
+    maker: MakeBlock = field(default_factory=lambda: MakeBlock(sx=0, sy=0, sz=0))
+    midi_info: dict = field(default_factory=lambda: {})
 
+@dataclass
+class GlobalContext:
+    sx: int = 0
+    sy: int = 0
+    sz: int = 0
+    track_gap: int = 3
+    tps: float = 20.0
+    parse_result: ParseResult = field(default_factory=lambda: ParseResult())
+
+app = Flask(__name__, static_folder=None)
+global_context = GlobalContext()
 
 # ===================== 静态文件 =====================
 @app.route("/")
@@ -97,6 +115,12 @@ def api_parse():
     sz = int(request.form.get("sz", 0))
     track_gap = int(request.form.get("track_gap", 3))
 
+    global_context.sx = sx
+    global_context.sy = sy
+    global_context.sz = sz
+    global_context.tps = tps
+    global_context.track_gap = track_gap
+
     # 保存临时文件
     if file.filename is None:
         return jsonify({"error": "无法获取文件名"}), 400
@@ -110,11 +134,17 @@ def api_parse():
         midi_info = parse_midi(tmp_path)
         block_data = transform_block(midi_info, TPS=tps)
         maker = MakeBlock(sx, sy, sz, track_gap=track_gap)
-        blocks = maker.build(block_data)
+        maker.build(block_data)
+        blocks = maker.get_blocks()
         track_len = maker.get_track_len()
 
         ex = sx + (midi_info["num_tracks"] - 1) * (track_gap + 1)
         ez = sz + track_len - 1
+
+        global_context.parse_result = ParseResult(
+            ex=ex, ey=sy, ez=ez,
+            maker=maker, midi_info=midi_info
+        )
 
         result = {
             "duration": round(midi_info["total_duration"] / 1e6, 2),
@@ -132,8 +162,8 @@ def api_parse():
 
 
 # ===================== RCON 放置 API =====================
-@app.route("/api/place/rcon", methods=["POST"])
-def api_place_rcon():
+@app.route("/api/place/<mode>", methods=["POST"])
+def api_place_rcon(mode):
     """
     RCON 模式放置方块
     接收：JSON，包含 file(base64) 或 file_path + 配置参数
@@ -143,31 +173,30 @@ def api_place_rcon():
     if not data:
         return jsonify({"error": "请求体为空"}), 400
 
+    if not global_context.parse_result:
+        return jsonify({"error": "请先调用 /api/parse"}), 400
+
     try:
-        host = data.get("rcon_host", "127.0.0.1")
-        port = int(data.get("rcon_port", 25575))
-        pwd = data.get("rcon_pwd", "")
-        auto_unload = data.get("rcon_auto_unload", True)
-        tps = float(data.get("tps", 20.0))
-        sx = int(data.get("sx", 0))
-        sy = int(data.get("sy", 0))
-        sz = int(data.get("sz", 0))
-        track_gap = int(data.get("track_gap", 3))
-        midi_path = data.get("midi_path")
+        if mode == "rcon":
+            host = data.get("rcon_host", "127.0.0.1")
+            port = int(data.get("rcon_port", 25575))
+            pwd = data.get("rcon_pwd", "")
+            config = {
+                'host': host,
+                'port': port,
+                'pwd': pwd
+            }
+        else:
+            return jsonify({"error": "未知的放置模式"}), 400
 
-        if not midi_path or not Path(midi_path).exists():
-            return jsonify({"error": "MIDI 文件路径无效"}), 400
-
-        # 解析并构建方块
-        midi_info = parse_midi(midi_path)
-        block_data = transform_block(midi_info, TPS=tps)
-        maker = MakeBlock(sx, sy, sz, track_gap=track_gap)
-        blocks = maker.build(block_data)
-
+        sx, sy, sz = global_context.sx, global_context.sy, global_context.sz
+        track_gap = global_context.track_gap
+        midi_info = global_context.parse_result.midi_info
+        maker = global_context.parse_result.maker
+        blocks = maker.get_blocks()
+        
         # 放置
-        placer = RconBlockPlacer(
-            host=host, port=port, pwd=pwd
-        )
+        placer = create_placer(mode, config)
         with placer:
             placer.place_blocks(blocks)
 
@@ -209,7 +238,8 @@ def api_place_mcfunction():
         midi_info = parse_midi(midi_path)
         block_data = transform_block(midi_info, TPS=tps)
         maker = MakeBlock(sx, sy, sz, track_gap=track_gap)
-        blocks = maker.build(block_data)
+        maker.build(block_data)
+        blocks = maker.get_blocks()
 
         # 生成 mcfunction
         output_path = TEMP_DIR / output_name
