@@ -11,8 +11,7 @@ from config.config import (
     DEFAULT_TPS, DEFAULT_TRACK_GAP,
     DEFAULT_PLACE_MODE, DEFAULT_AUTO_CONFIRM
 )
-from services.block_placer.base import BlockPlacer
-from services.block_placer.placer import RconBlockPlacer
+from services.block_placer.placer import create_placer
 from services.parse_midi import parse_midi
 from services.transform_block import transform_block
 from services.make_block import MakeBlock
@@ -59,17 +58,6 @@ def build_config(args: argparse.Namespace) -> AppConfig:
         place_mode=args.place_mode,
         auto_confirm=args.auto_confirm
     )
-
-
-def create_placer(place_mode: str, config: dict) -> BlockPlacer:
-    """放置器工厂：根据模式创建对应的放置实例，新增模式只需扩展分支"""
-    if place_mode == "rcon":
-        return RconBlockPlacer(config)
-    # 后续新增 mcfunction 模式，在这里加分支即可
-    # elif place_mode == "mcfunction":
-    #     return McFunctionPlacer(output_path=MCF_OUTPUT_PATH)
-    else:
-        raise ValueError(f"不支持的放置模式: {place_mode}")
 
 
 def user_confirm(prompt: str, auto_confirm: bool) -> bool:

@@ -3,13 +3,15 @@ McMusic Web Server - Flask 后端
 提供静态文件服务和 REST API，对接业务逻辑层
 """
 import os
+import time
 import json
 from dataclasses import dataclass, field
 import tempfile
 from pathlib import Path
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response
 
 # 业务逻辑
+from utils.logger import LOGGER, SSELogHandler, ColoredFormatter
 from services.parse_midi import parse_midi
 from services.transform_block import transform_block
 from services.make_block import MakeBlock
@@ -32,10 +34,11 @@ BUILTIN_DEFAULTS = {
 
 @dataclass
 class ParseResult:
+    default: bool = True
     ex: int = 0
     ey: int = 0
     ez: int = 0
-    maker: MakeBlock = field(default_factory=lambda: MakeBlock(sx=0, sy=0, sz=0))
+    maker: MakeBlock = field(default_factory=lambda: MakeBlock(0, 0, 0))
     midi_info: dict = field(default_factory=lambda: {})
 
 @dataclass
@@ -46,6 +49,7 @@ class GlobalContext:
     track_gap: int = 3
     tps: float = 20.0
     parse_result: ParseResult = field(default_factory=lambda: ParseResult())
+    placer_message: list = field(default_factory=list)  # 存储放置器的消息
 
 app = Flask(__name__, static_folder=None)
 global_context = GlobalContext()
@@ -101,6 +105,10 @@ def api_parse():
     解析 MIDI 文件，返回音乐信息和方块统计
     接收：multipart/form-data，包含 file 字段 + 可选参数 tps/sx/sy/sz/track_gap
     """
+    # 重置全局变量
+    global global_context
+    global_context = GlobalContext()
+
     if "file" not in request.files:
         return jsonify({"error": "未上传文件"}), 400
 
@@ -142,6 +150,7 @@ def api_parse():
         ez = sz + track_len - 1
 
         global_context.parse_result = ParseResult(
+            default=False,
             ex=ex, ey=sy, ez=ez,
             maker=maker, midi_info=midi_info
         )
@@ -161,34 +170,91 @@ def api_parse():
         os.unlink(tmp_path)
 
 
-# ===================== RCON 放置 API =====================
+# ===================== 获取消息 API =====================
+def send(msg, type) -> None:
+    if type == 'close':
+        global_context.placer_message.append(type)
+        return
+    out_msg = "event: %s\ndata: %s\n\n"%(type, msg)
+    global_context.placer_message.append(out_msg)
+
+@app.route("/api/getMsg")
+def api_get_msg():
+    """
+    获取放置器的消息
+    """
+    send(json.dumps({'Hello Client.': "#7AA2F7"}), 'msg')
+    def stream():
+        cur_idx = 0
+        try:
+            while True:
+                messages = global_context.placer_message
+                if cur_idx < len(messages):
+                    msg = messages[cur_idx]
+                    cur_idx += 1
+                    if msg == 'close':
+                        break
+                    # WSGI 要求 yield bytes；统一转字符串后编码，兼容 int/float
+                    if not isinstance(msg, str):
+                        msg = str(msg)
+                    yield msg.encode("utf-8")
+                else:
+                    time.sleep(0.1)
+        except GeneratorExit:
+            # 浏览器关闭 EventSource 时生成器被关闭，直接结束
+            return
+
+    return Response(
+        stream(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # 禁用代理缓冲
+            "Connection": "keep-alive",
+        },
+    )
+
+# ===================== 放置 API =====================
 @app.route("/api/place/<mode>", methods=["POST"])
 def api_place_rcon(mode):
     """
-    RCON 模式放置方块
+    放置方块
     接收：JSON，包含 file(base64) 或 file_path + 配置参数
     简化版：前端先调用 /api/parse，然后把解析结果和配置传过来
     """
+    sse_log_handler = SSELogHandler(send)
+    sse_log_handler.setFormatter(ColoredFormatter(datefmt="%H:%M:%S", use_color=False))
+    LOGGER.addHandler(sse_log_handler)
+
+
+    # 每次放置前清空历史消息，保证新建立的 SSE 流从本次放置开始读
+    global_context.placer_message.clear()
     data = request.get_json()
     if not data:
+        LOGGER.error("请求体为空")
         return jsonify({"error": "请求体为空"}), 400
 
-    if not global_context.parse_result:
+    if global_context.parse_result.default:
+        LOGGER.error("请先调用 /api/parse")
         return jsonify({"error": "请先调用 /api/parse"}), 400
 
     try:
+        begin_time = time.time()
         if mode == "rcon":
-            host = data.get("rcon_host", "127.0.0.1")
-            port = int(data.get("rcon_port", 25575))
-            pwd = data.get("rcon_pwd", "")
+            LOGGER.info("RCON 模式")
+            host = data.get("host", "127.0.0.1")
+            port = int(data.get("port", 25575))
+            pwd = data.get("pwd", "")
             config = {
                 'host': host,
                 'port': port,
                 'pwd': pwd
             }
         else:
+            LOGGER.error("未知的放置模式")
             return jsonify({"error": "未知的放置模式"}), 400
 
+        LOGGER.info("开始获取配置信息...")
         sx, sy, sz = global_context.sx, global_context.sy, global_context.sz
         track_gap = global_context.track_gap
         midi_info = global_context.parse_result.midi_info
@@ -196,9 +262,14 @@ def api_place_rcon(mode):
         blocks = maker.get_blocks()
         
         # 放置
-        placer = create_placer(mode, config)
+        LOGGER.info("初始化放置器...")
+        placer = create_placer(mode, config, send_callback=send)
         with placer:
+            LOGGER.info("开始放置...")
             placer.place_blocks(blocks)
+        send(json.dumps({f"ヾ (≧∇≦*) ｼ 放置完成  耗时:{time.time() - begin_time} s": "#9ECE6A"}), 'msg')
+        send("", 'done')
+        send("", 'close')
 
         return jsonify({
             "success": True,
@@ -208,6 +279,8 @@ def api_place_rcon(mode):
         })
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
+    finally:
+        LOGGER.removeHandler(sse_log_handler)
 
 
 # ===================== mcfunction 导出 API =====================
@@ -275,4 +348,4 @@ if __name__ == "__main__":
     print("  McMusic Web Server")
     print("  访问地址: http://127.0.0.1:5000")
     print("=" * 50)
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    app.run(host="127.0.0.1", port=5000, debug=False, threaded=True)

@@ -1,14 +1,21 @@
 from abc import ABC, abstractmethod
+from typing import Callable, Optional
 
+from utils.logger import LOGGER
 from utils.constants import BlockEntry
 
-
+    
 class BlockPlacer(ABC):
     """放置方块的抽象类"""
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: dict, send_callback: Optional[Callable[[str, str], None]] = None) -> None:
         """构造方法"""
         self.config = config
+        self.logger = LOGGER
+        if send_callback is not None:
+            self.send = send_callback
+        else:
+            self.send = lambda msg, type: None
 
         self._validate_config()
         self._init_resource()

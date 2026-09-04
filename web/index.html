@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>McMusic - MIDI 红石音乐生成器</title>
+<script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js"></script>
 <link rel="stylesheet" href="/css/index.css">
 </head>
 <body>
@@ -71,7 +72,8 @@ let state = {
   placeMode: 'rcon',
   checks: [],
   progress: 0,
-  logs: []
+  logs: [],
+  placementDone: false
 };
 
 // 加载 localStorage
@@ -191,6 +193,7 @@ function renderPage(direction) {
   // 页面特定的初始化
   if (state.step === 0) initStep1();
   if (state.step === 1) initStep2();
+  if (state.step === 2) initModeConfig();
   if (state.step === 4) initStep5();
 
   updateNavButtons();
@@ -203,7 +206,7 @@ function updateNavButtons() {
 
   if (state.step === STEPS.length - 1) {
     next.innerHTML = '完成';
-    next.disabled = false;
+    next.disabled = !state.placementDone;
   } else if (state.step === 3) {
     next.innerHTML = '开始放置 ' + icon('arrowRight');
     next.disabled = !state.checks.every(c => c.status !== 'pending');
@@ -213,6 +216,9 @@ function updateNavButtons() {
   } else if (state.step === 1){
     next.innerHTML = '下一步 ' + icon('arrowRight');
     next.disabled = !state.midiIsParsed;
+  } else if (state.step === 2) {
+    next.innerHTML = '下一步 ' + icon('arrowRight');
+    next.disabled = !isModeConfigValid();
   } else {
     next.innerHTML = '下一步 ' + icon('arrowRight');
     next.disabled = false;
@@ -432,7 +438,7 @@ function doParse() {
             <div class="page-title">解析预览</div>
             <div class="page-desc">解析 MIDI 文件并预览生成结果</div>
             <div class="loading-state" style="padding:30px 20px">
-              <div style="color:var(--error);margin-bottom:12px;display:flex">${icon('alertCircle')}</div>
+              <div class="upload-icon" style="color:var(--error);margin-bottom:12px">${icon('alertCircle')}</div>
               <div class="loading-text" style="color:var(--error);margin-bottom:16px">解析失败：${error.message}</div>
               <button class="btn btn-primary" onclick="retryParse()">${icon('refreshCw')} 重试</button>
             </div>
@@ -510,23 +516,46 @@ function selectMode(mode) {
       }
       configEl.style.opacity = '1';
       configEl.style.transform = 'translateY(0)';
+      // 绑定新配置区的校验事件
+      initModeConfig();
     }, 150);
   }
 }
 
 // ===================== 步骤3：模式配置 =====================
+function initRconConfig() {
+  const hostInput = document.getElementById('inputRconHost');
+  const portInput = document.getElementById('inputRconPort');
+  if (!hostInput || !portInput) return;
+
+  hostInput.addEventListener('change', (e) => {
+    if (!checkIp(e.target.value)) {
+      showToast('请输入有效的 IP 地址', 'error');
+    }
+  });
+
+  portInput.addEventListener('change', (e) => {
+    const port = parseInt(e.target.value, 10);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      showToast('请输入有效的端口（1-65535）', 'error');
+    }
+  });
+}
+
 function renderModeConfig(mode) {
   const c = state.config;
   if (mode === 'rcon') {
     return `
       <div class="form-group">
         <label class="form-label">服务器地址</label>
-        <input class="form-input" value="${c.rcon_host}" id="inputRconHost">
+        <input class="form-input" value="${c.rcon_host}" id="inputRconHost" placeholder="127.0.0.1">
+        <div class="field-error-msg" id="errRconHost"></div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">RCON 端口</label>
-          <input class="form-input" type="number" value="${c.rcon_port}" id="inputRconPort">
+          <input class="form-input" type="number" min="1" max="65535" step="1" value="${c.rcon_port}" id="inputRconPort" placeholder="25575">
+          <div class="field-error-msg" id="errRconPort"></div>
         </div>
         <div class="form-group">
           <label class="form-label">RCON 密码</label>
@@ -539,6 +568,7 @@ function renderModeConfig(mode) {
       <div class="form-group">
         <label class="form-label">输出文件名</label>
         <input class="form-input" value="${c.mcfunction_output}" id="inputMcfunctionOutput">
+        <div class="field-error-msg" id="errMcfunctionOutput"></div>
       </div>
       <div class="hint-text">${icon("lightbulb")} 文件将保存在项目 data/temp/ 目录下</div>
     `;
@@ -575,6 +605,107 @@ function toggleSwitch(key) {
   // 直接切换开关样式，不整页重渲染
   const sw = document.querySelector(`.switch[data-switch-key="${key}"]`);
   if (sw) sw.classList.toggle('on', state.config[key]);
+}
+
+// ===================== 表单校验 =====================
+const _fieldValid = { rconHost: true, rconPort: true, mcfunctionOutput: true };
+
+function isValidHost(val) {
+  if (val == 'localhost') return true;
+  
+	var rep = /^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$/;
+	if(!rep.test(val)){
+		return false;
+	}else{
+		return true;
+	}
+}
+
+function setFieldError(inputId, errId, msg) {
+  const input = document.getElementById(inputId);
+  const err = document.getElementById(errId);
+  if (!input || !err) return;
+  if (msg) {
+    input.classList.add('field-error');
+    err.innerHTML = icon('alertCircle') + msg;
+    err.style.display = 'flex';
+  } else {
+    input.classList.remove('field-error');
+    err.innerHTML = '';
+    err.style.display = 'none';
+  }
+}
+
+function validateRconHost(showError) {
+  const input = document.getElementById('inputRconHost');
+  if (!input) return true;
+  const val = input.value.trim();
+  let msg = '';
+  if (!val) msg = '请输入服务器地址';
+  else if (!isValidHost(val)) msg = '请输入有效的 IP 地址或域名';
+  if (showError) setFieldError('inputRconHost', 'errRconHost', msg);
+  _fieldValid.rconHost = !msg;
+  return !msg;
+}
+
+function validateRconPort(showError) {
+  const input = document.getElementById('inputRconPort');
+  if (!input) return true;
+  // 强制整数：去除非数字字符和前导零
+  const cleaned = input.value.replace(/[^\d]/g, '').replace(/^0+/, '') || '0';
+  if (input.value !== cleaned) input.value = cleaned;
+  const port = parseInt(cleaned, 10);
+  let msg = '';
+  if (!cleaned || cleaned === '0') msg = '请输入端口号';
+  else if (port < 1 || port > 65535) msg = '端口范围 1 - 65535';
+  if (showError) setFieldError('inputRconPort', 'errRconPort', msg);
+  _fieldValid.rconPort = !msg;
+  return !msg;
+}
+
+function validateMcfunctionOutput(showError) {
+  const input = document.getElementById('inputMcfunctionOutput');
+  if (!input) return true;
+  const val = input.value.trim();
+  let msg = '';
+  if (!val) msg = '请输入输出文件名';
+  if (showError) setFieldError('inputMcfunctionOutput', 'errMcfunctionOutput', msg);
+  _fieldValid.mcfunctionOutput = !msg;
+  return !msg;
+}
+
+function isModeConfigValid() {
+  if (state.placeMode === 'rcon') {
+    return _fieldValid.rconHost && _fieldValid.rconPort;
+  } else {
+    return _fieldValid.mcfunctionOutput;
+  }
+}
+
+function initModeConfig() {
+  if (state.placeMode === 'rcon') {
+    const host = document.getElementById('inputRconHost');
+    const port = document.getElementById('inputRconPort');
+    if (host) {
+      host.addEventListener('input', () => { validateRconHost(true); updateNavButtons(); });
+      host.addEventListener('blur', () => { validateRconHost(true); updateNavButtons(); });
+    }
+    if (port) {
+      port.addEventListener('input', () => { validateRconPort(true); updateNavButtons(); });
+      port.addEventListener('blur', () => { validateRconPort(true); updateNavButtons(); });
+    }
+    // 初始校验（默认值合法，不显示错误但更新状态）
+    validateRconHost(false);
+    validateRconPort(false);
+  } else {
+    const output = document.getElementById('inputMcfunctionOutput');
+    if (output) {
+      output.addEventListener('input', () => { validateMcfunctionOutput(true); updateNavButtons(); });
+      output.addEventListener('blur', () => { validateMcfunctionOutput(true); updateNavButtons(); });
+    }
+    validateMcfunctionOutput(false);
+  }
+  updateNavButtons();
 }
 
 // ===================== 步骤4：检查确认 =====================
@@ -631,13 +762,6 @@ function renderStep4() {
       <div class="summary-row"><span class="summary-label">起始坐标</span><span class="summary-value">(${r.start_x ?? '--'}, ${r.start_y ?? '--'}, ${r.start_z ?? '--'})</span></div>
       <div class="summary-row"><span class="summary-label">终止坐标</span><span class="summary-value">(${r.end_x ?? '--'}, ${r.end_y ?? '--'}, ${r.end_z ?? '--'})</span></div>
     </div>
-
-    <div class="switch-row">
-      <span class="switch-label">自动确认（跳过此步骤直接放置）</span>
-      <div class="switch ${state.config.auto_confirm ? 'on' : ''}" data-switch-key="auto_confirm" onclick="toggleSwitch('auto_confirm')">
-        <div class="switch-knob"></div>
-      </div>
-    </div>
   `;
 }
 
@@ -673,14 +797,20 @@ function updateCheckItem(index, status, detail) {
 function runChecks() {
   state.checks.forEach((check, i) => {
     setTimeout(() => {
-      // 离开步骤4后忽略旧定时器
-      if (state.step !== 3) return;
-      if (i === 2 && state.placeMode === 'mcfunction') {
-        updateCheckItem(i, 'skip', 'mcfunction 模式无需连接');
-      } else {
-        updateCheckItem(i, 'success');
+      if (check.status === 'pending'){
+        if (i < 2){
+            if (state.midiIsParsed) updateCheckItem(i, 'success');
+            else updateCheckItem(i, 'error', '请先解析 MIDI 文件');
+        } else {
+          const c = state.config;
+          if (c.rcon_host && c.rcon_port) {
+            updateCheckItem(i, 'success');
+          } else {
+            updateCheckItem(i, 'error', '请填写 RCON 配置');
+          }
+        }
       }
-    }, 600 * (i + 1));
+    }, 1000);
   });
 }
 
@@ -704,52 +834,109 @@ function renderStep5() {
 
 function initStep5() {
   // 防止重复启动放置
-  if (_placementTimers.connection || _placementTimers.interval) return;
+  if (_placement.es) return;
+  state.placementDone = false;
   state.progress = 0;
   state.logs = [];
+  updateNavButtons();
   startPlacement();
 }
 
 function stopPlacement() {
-  if (_placementTimers.connection) { clearTimeout(_placementTimers.connection); _placementTimers.connection = null; }
-  if (_placementTimers.interval) { clearInterval(_placementTimers.interval); _placementTimers.interval = null; }
+  _placement.finished = true;
+  if (_placement.es) { _placement.es.close(); _placement.es = null; }
+  if (_placement.reconnectTimer) { clearTimeout(_placement.reconnectTimer); _placement.reconnectTimer = null; }
+  document.getElementById('nextBtn').disabled = false;
 }
 
 function startPlacement() {
   const parsed = state.parseResultMap && state.parseHash ? state.parseResultMap.get(state.parseHash) : null;
   const total = parsed ? parsed.block_count : 1000;
-  addLog('info', `连接服务器 ${state.config.rcon_host}:${state.config.rcon_port}...`);
+  clearLog();
+  addLog('info', '正在建立通信...');
 
-  _placementTimers.connection = setTimeout(() => {
-    _placementTimers.connection = null;
-    addLog('success', '连接成功，开始放置方块...');
-    addLog('info', `共 ${total} 个方块待放置`);
+  _placement.finished = false;
+  _placement.placeRequested = false;
 
-    let placed = 0;
-    _placementTimers.interval = setInterval(() => {
-      const batch = Math.floor(Math.random() * 80) + 20;
-      placed = Math.min(placed + batch, total);
-      state.progress = (placed / total) * 100;
+  // 连接建立后请求后端开始放置（只发起一次，断线重连不重复）
+  function triggerPlace() {
+    if (_placement.placeRequested) return;
+    _placement.placeRequested = true;
 
+    const body = state.placeMode === 'rcon' ? {
+      host: state.config.rcon_host,
+      port: state.config.rcon_port,
+      pwd: state.config.rcon_pwd,
+    } : {
+      mcfunction_output: state.config.mcfunction_output,
+    };
+
+    fetch('/api/place/' + state.placeMode, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        addLog('error', '放置请求失败：' + (err.error || res.status));
+      }
+    }).catch((err) => {
+      addLog('error', '放置请求异常：' + err.message);
+    }).finally(() => {
+      _placement.placeRequested = false;
+    });
+  }
+
+  function connect() {
+    if (_placement.finished) return;  // 已结束不再重连
+
+    const eventSource = new EventSource('/api/getMsg');
+    _placement.es = eventSource;
+
+    eventSource.onopen = () => {
+      addLog('success', '通信已建立。');
+      triggerPlace();
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+      _placement.es = null;
+      if (_placement.finished) return;  // 服务端正常 close 导致的断开，不重连
+      addLog('error', '连接断开，3 秒后重连...');
+      _placement.reconnectTimer = setTimeout(connect, 3000);
+    };
+
+    eventSource.addEventListener('msg', (e) => {
+      let data;
+      try { data = JSON.parse(e.data); } catch (err) { return; }
+      addLog('json', data);
+    });
+
+    eventSource.addEventListener('progress', (e) => {
+      let data;
+      try { data = JSON.parse(e.data); } catch (err) { return; }
+
+      state.progress = parseFloat(data['progress']);
       const fill = document.getElementById('progressFill');
       const text = document.getElementById('progressText');
-      if (!fill || !text) { stopPlacement(); return; }
+      if (!fill || !text) return;
       fill.style.width = state.progress + '%';
       text.textContent = state.progress.toFixed(1) + '%';
+    });
 
-      if (placed % 200 < batch) {
-        addLog('info', `已放置 ${placed}/${total} (${state.progress.toFixed(1)}%)`);
-      }
+    eventSource.addEventListener('done', () => {
+      _placement.finished = true;
+      eventSource.close();
+      _placement.es = null;
+      finishPlacement(total);
+    });
+  }
 
-      if (placed >= total) {
-        stopPlacement();
-        finishPlacement(total);
-      }
-    }, 150);
-  }, 800);
+  connect();
 }
 
 function finishPlacement(total) {
+  state.placementDone = true;
   addLog('success', `所有方块放置完成！共 ${total} 个`);
   document.getElementById('step5Subtitle').innerHTML = `${icon('checkCircle')} 放置完成！`;
   document.getElementById('step5Subtitle').style.color = 'var(--success)';
@@ -769,19 +956,37 @@ function finishPlacement(total) {
 }
 
 function addLog(type, msg) {
-  const now = new Date();
-  const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-  state.logs.push({ type, msg, time });
   const logBox = document.getElementById('logBox');
+  let html = "";
+  let log = "";
+  if (type == 'json') {
+    html += "<div style='display: flex'>";
+    for (text in msg) {
+      // json : {text: color, ...}
+      log += text;
+      html += `<div class="log-line" style="color: ${msg[text]}">${text}&nbsp;</div>`;
+    }
+    html += "</div>";
+  } else {
+    log = msg;
+    html += `<div class="log-line ${type}">${msg}</div>`;
+  }
+
+  state.logs.push({ type, log });
   if (logBox) {
-    logBox.innerHTML += `<div class="log-line ${type}">[${time}] ${msg}</div>`;
+    logBox.innerHTML += html;
     logBox.scrollTop = logBox.scrollHeight;
   }
 }
 
+function clearLog() {
+  const logBox = document.getElementById('logBox');
+  logBox.innerHTML = "";
+}
+
 // ===================== 导航 =====================
 let _navigating = false;
-const _placementTimers = { connection: null, interval: null };
+const _placement = { es: null, reconnectTimer: null, finished: false, placeRequested: false };
 
 async function nextStep() {
   if (_navigating) return;
@@ -791,12 +996,13 @@ async function nextStep() {
     stopPlacement();
     state.step = 0;
     state.file = null;
-    state.parseResultMap = new Map();
+    // state.parseResultMap = new Map();
     state.parseHash = null;
     state.midiIsParsed = false;
     state.checks = [];
     state.progress = 0;
     state.logs = [];
+    state.placementDone = false;
     state.placeMode = state.config.place_mode || 'rcon';
     renderStepper();
     renderPage();
@@ -834,8 +1040,7 @@ async function nextStep() {
       state.checks = [
         { name: 'MIDI 文件解析', status: 'pending', detail: '' },
         { name: '方块序列生成', status: 'pending', detail: '' },
-        { name: 'RCON 服务器连接', status: 'pending', detail: '' },
-        { name: '放置区域可用性', status: 'pending', detail: '' }
+        { name: '模式配置数据', status: 'pending', detail: '' },
       ];
     }
 
@@ -1001,6 +1206,15 @@ function formatSize(bytes) {
   return (bytes / 1024 / 1024).toFixed(1) + ' MB';
 }
 
+function checkIp(ip){
+	var rep = /^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$/;
+	if(!rep.test(ip)){
+		return false;
+	}else{
+		return true;
+	}
+}
+
 /**
  * 计算包含文件的 FormData 完整哈希（SHA-256）
  */
@@ -1010,19 +1224,17 @@ async function hashFormData(formData, options = {}) {
     includeFileName = false,
     algorithm = 'SHA-256'
   } = options;
-
   const items = [];
 
   // 遍历所有条目（包含同名多值）
   for (const [key, value] of formData.entries()) {
     if (value instanceof File || value instanceof Blob) {
-      // 二进制内容：计算文件内容哈希
+      // 二进制内容：读取文件内容 + 纯JS计算哈希
       const buffer = await value.arrayBuffer();
-      const hashBuffer = await crypto.subtle.digest(algorithm, buffer);
-      const hashHex = Array.from(new Uint8Array(hashBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-
+      // 替代原生 crypto.subtle.digest
+      const wordArray = CryptoJS.lib.WordArray.create(buffer);
+      const hashHex = CryptoJS[algorithm.replace('-', '')](wordArray).toString();
+      
       // 可选：将文件名纳入哈希
       const namePart = includeFileName && value.name ? `:${value.name}` : '';
       items.push([key, `file:${hashHex}${namePart}`]);
@@ -1042,13 +1254,9 @@ async function hashFormData(formData, options = {}) {
 
   // 拼接成最终字符串，计算总哈希
   const finalStr = items.map(([k, v]) => `${k}=${v}`).join('&');
-  const encoder = new TextEncoder();
-  const finalBuffer = await crypto.subtle.digest(algorithm, encoder.encode(finalStr));
-
-  return Array.from(new Uint8Array(finalBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  return CryptoJS[algorithm.replace('-', '')](finalStr).toString();
 }
+
 
 
 let _toastTimer = null;
